@@ -1,6 +1,8 @@
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, status, HTTPException
 from database.database import *
 from user import *
+from loginfunctions import *
+
 
 app = FastAPI(
     title="Secret Voldemort",
@@ -12,20 +14,16 @@ app = FastAPI(
 # Register user
 @app.post(
     "/user/",
-    response_model=UserTemp,
-    status_code=status.HTTP_201_CREATED
+    response_model=str,
+    status_code=status.HTTP_200_OK
 )
-async def register_user(userNew: UserTemp):
-    if check_data_consistency(userNew):
-        # To do:
-        # Verifies the existence of the user
-        # if so, create user; if not, error
-        # password hashing
+async def register_user(user_to_reg: UserTemp):
 
-        return new_user(userNew.name, userNew.email_address,
-            userNew.password, "photo")
-    else:
+    if email_exists(user_to_reg.email_address):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="incorrect user data"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="existing user"
         )
+    else:
+        new_user(user_to_reg.name, user_to_reg.email_address,
+                 hash_password(user_to_reg.password), "photo")
