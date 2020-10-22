@@ -26,7 +26,7 @@ app.add_middleware(
 
 # Register user
 @app.post(
-    "/user/",
+    "/signup",
     status_code=status.HTTP_200_OK
 )
 async def register_user(user_to_reg: UserTemp):
