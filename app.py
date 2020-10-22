@@ -1,7 +1,8 @@
-from fastapi import FastAPI, status, HTTPException
+from fastapi import FastAPI
 from database.database import *
 from user import *
 from loginfunctions import *
+from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI(
@@ -10,23 +11,36 @@ app = FastAPI(
     version="0.1"
 )
 
+origins = [
+    "http://localhost:3000"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # Register user
 @app.post(
     "/user/",
-    response_model=str,
     status_code=status.HTTP_200_OK
 )
 async def register_user(user_to_reg: UserTemp):
 
-    if email_exists(user_to_reg.email_address):
+    if email_exists(user_to_reg.email):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="existing user"
         )
     else:
-        new_user(user_to_reg.name, user_to_reg.email_address,
+        new_user(user_to_reg.username, user_to_reg.email,
                  hash_password(user_to_reg.password), "photo")
+        return {"email": user_to_reg.email}
+
 
 @app.post("/token")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):

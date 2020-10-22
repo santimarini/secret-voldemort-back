@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr
 
 
 class UserTemp(BaseModel):
-    name: str
-    email_address: EmailStr
+    username: str
+    email: str
     password: str
 
