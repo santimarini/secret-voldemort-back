@@ -54,7 +54,7 @@ def get_user_by_email(email_address):
 
 #given a email, returns the verification bit
 @pony.orm.db_session
-def is_verified(email_address)
+def is_verified(email_address):
     return(User.get(email_address=email_address).verified)
 
 #verify if certain email exists
@@ -99,3 +99,11 @@ def join_game(player_id,game_name):
 @pony.orm.db_session
 def num_of_players(game_name):
     return(count(get_game_by_name(game_name).players))
+
+@pony.orm.db_session
+def is_player_in_game(player_id,game_name):
+    return(Player[player_id].actualGame == get_game_by_name(game_name)) 
+
+@pony.orm.db_session
+def delete_player(player_id):
+    Player[player_id].delete()

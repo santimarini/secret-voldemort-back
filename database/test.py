@@ -18,7 +18,9 @@ print(pid)
 print(pid2)
 print("--------------")
 join_game(pid,"partida1")
-
-print("jugadores en la partida")
+print("num de jugadores en la partida")
 print(num_of_players("partida1"))
-print(get_game_by_name("partida1").creation_date)
+if is_player_in_game(pid,"partida1"):
+    delete_player(pid)
+print("num de jugadores en la partida luego de borrar")
+print(num_of_players("partida1"))
