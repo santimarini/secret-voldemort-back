@@ -52,6 +52,11 @@ def new_user(name, email_address, password, photo):
 def get_user_by_email(email_address):
     return(User.get(email_address=email_address))
 
+#given a email, returns the verification bit
+@pony.orm.db_session
+def is_verified(email_address)
+    return(User.get(email_address=email_address).verified)
+
 #verify if certain email exists
 @pony.orm.db_session
 def email_exists(email_address):
