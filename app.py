@@ -62,7 +62,6 @@ async def create_game(game: ConfigGame):
     else:
         game_name = new_game(game.name, game.max_players)
         player_id = new_player(game.email)
-        print(player_id)
         join_game(player_id, game_name)
         return {"name": game_name}
 

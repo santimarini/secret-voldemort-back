@@ -75,6 +75,7 @@ def game_exists(name):
     return(Game.get(name=name) is not None)
 
 #<precondition: user exists>
+
 @pony.orm.db_session
 def new_player(email_address):
     user1 = get_user_by_email(email_address)
@@ -89,7 +90,7 @@ def get_game_by_name(name):
     return(g1)
 
 #<precondition: player and game exists>
-#agrego a la partida el jugador
+
 @pony.orm.db_session
 def join_game(player_id,game_name):
     g1 = get_game_by_name(game_name)
@@ -109,6 +110,8 @@ def is_user_in_game(email_address,game_name):
             b = True
     return b
 
+#delete a player
 @pony.orm.db_session
 def delete_player(player_id):
     Player[player_id].delete()
+    
