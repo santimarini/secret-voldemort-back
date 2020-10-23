@@ -52,3 +52,16 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     # return token to identify a specific user, it'll be the user's email for simplicity
     return {"access_token": user.email_address, "token_type": "bearer"}
+
+@app.post("/newgame")
+async def create_game(game: ConfigGame):
+    if not is_verified(game.email):
+        raise HTTPException(status_code=401, detail="No verified email ")
+    if game_exists(game.name):
+        raise HTTPException(status_code=401, detail="Game already exists")
+    else:
+        game_name = new_game(game.name, game.max_players)
+        player_id = new_player(game.email)
+        join_game(player_id, game_name)
+        return {"name": game_name}
+
