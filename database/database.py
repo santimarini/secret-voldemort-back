@@ -54,7 +54,7 @@ def get_user_by_email(email_address):
 
 #given a email, returns the verification bit
 @pony.orm.db_session
-def is_verified(email_address)
+def is_verified(email_address):
     return(User.get(email_address=email_address).verified)
 
 #verify if certain email exists

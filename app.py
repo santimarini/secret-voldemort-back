@@ -55,6 +55,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @app.post("/newgame")
 async def create_game(game: ConfigGame):
+    if not is_verified(game.email):
+        raise HTTPException(status_code=401, detail="No verified email ")
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
