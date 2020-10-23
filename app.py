@@ -33,7 +33,7 @@ async def register_user(user_to_reg: UserTemp):
 
     if email_exists(user_to_reg.email):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=404,
             detail="existing user"
         )
     else:
@@ -65,3 +65,26 @@ async def create_game(game: ConfigGame):
         join_game(player_id, game_name)
         return {"name": game_name}
 
+# Entry of url to join the game
+@app.post("/game/{game_name}")
+async def join_url(game_name: str, email: str):
+    if game_exists(game_name):
+        game = get_game_by_name(game_name)
+        player_id = new_player(email)
+        if not is_user_in_game(email, game_name):
+            if num_of_players(game_name) < game.max_players:
+                join_game(player_id, game_name)
+                return {"username": get_user_by_email(email).name}
+            else:
+                raise HTTPException(
+                    status_code=404,
+                    detail="The room is full")
+        else:
+            delete_player(player_id)
+            raise HTTPException(
+                status_code=404,
+                detail="Player already in the game")
+    else:
+        raise HTTPException(
+            status_code=404,
+            detail="Game is not exists")

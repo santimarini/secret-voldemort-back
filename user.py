@@ -10,5 +10,3 @@ class ConfigGame(BaseModel):
     name: str
     max_players: int
     email: str
-
-

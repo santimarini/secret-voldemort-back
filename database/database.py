@@ -52,7 +52,6 @@ def new_user(name, email_address, password, photo):
 def get_user_by_email(email_address):
     return(User.get(email_address=email_address))
 
-#<precondition: the user exists>
 #given a email, returns the verification bit
 @pony.orm.db_session
 def is_verified(email_address):
@@ -76,7 +75,7 @@ def game_exists(name):
     return(Game.get(name=name) is not None)
 
 #<precondition: user exists>
-#creates a new player
+
 @pony.orm.db_session
 def new_player(email_address):
     user1 = get_user_by_email(email_address)
@@ -91,6 +90,7 @@ def get_game_by_name(name):
     return(g1)
 
 #<precondition: player and game exists>
+
 @pony.orm.db_session
 def join_game(player_id,game_name):
     g1 = get_game_by_name(game_name)
@@ -100,11 +100,6 @@ def join_game(player_id,game_name):
 @pony.orm.db_session
 def num_of_players(game_name):
     return(count(get_game_by_name(game_name).players))
-
-#return true if the player is in the game
-@pony.orm.db_session
-def is_player_in_game(player_id,game_name):
-    return(Player[player_id].actualGame == get_game_by_name(game_name))
 
 #return true if the user is in the game
 @pony.orm.db_session
@@ -119,3 +114,4 @@ def is_user_in_game(email_address,game_name):
 @pony.orm.db_session
 def delete_player(player_id):
     Player[player_id].delete()
+    
