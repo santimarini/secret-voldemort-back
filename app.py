@@ -3,6 +3,7 @@ from database.database import *
 from user import *
 from loginfunctions import *
 from fastapi.middleware.cors import CORSMiddleware
+from datetime.datetime
 
 
 app = FastAPI(
@@ -52,3 +53,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=400, detail="Incorrect username or password")
     # return token to identify a specific user, it'll be the user's email for simplicity
     return {"access_token": user.email_address, "token_type": "bearer"}
+
+@app.post("/newgame")
+async def create_game(game: ConfigGame):
+    if game_exists(game.name):
+        raise HTTPException(status_code=401, detail="This name already exists")
+    else:
+        game_created = new_game(game.name, game.max_players)
+        join(game_created, email)
+        return {"name": game_created.name, "max_players": game_created.max_players}
+
