@@ -114,4 +114,21 @@ def is_user_in_game(email_address,game_name):
 @pony.orm.db_session
 def delete_player(player_id):
     Player[player_id].delete()
-    
+
+#return list of players in a specific game
+@pony.orm.db_session
+def get_player_list(game_name):
+    list = []
+    for p in get_game_by_name(game_name).players:
+        player = Player[p.id]
+        list.append(player)
+    return list
+
+#transform a player object in a dict
+@pony.orm.db_session
+def player_to_dict(player_id):
+    p = Player[player_id]
+    dict_p = dict(id = p.id, username = p.username, is_alive = p.is_alive,
+            loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
+            actualGame = p.actualGame.name)
+    return dict_p

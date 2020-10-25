@@ -23,7 +23,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Register user
 @app.post(
     "/signup",
@@ -61,8 +60,6 @@ async def create_game(game: ConfigGame):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
         game_name = new_game(game.name, game.max_players)
-        player_id = new_player(game.email)
-        join_game(player_id, game_name)
         return {"name": game_name}
 
 # Entry of url to join the game
@@ -70,20 +67,32 @@ async def create_game(game: ConfigGame):
 async def join_url(game_name: str, email: str):
     if game_exists(game_name):
         game = get_game_by_name(game_name)
-        player_id = new_player(email)
-        if not is_user_in_game(email, game_name):
-            if num_of_players(game_name) < game.max_players:
-                join_game(player_id, game_name)
-                return {"username": get_user_by_email(email).name}
-            else:
-                raise HTTPException(
-                    status_code=404,
-                    detail="The room is full")
-        else:
-            delete_player(player_id)
+        if game.initial_date is not None:
             raise HTTPException(
                 status_code=404,
-                detail="Player already in the game")
+                detail="The game has already started")
+        else:
+            player_id = new_player(email)
+            if not is_user_in_game(email, game_name):
+                if num_of_players(game_name) < game.max_players:
+                    join_game(player_id, game_name)
+                    list = get_player_list(game_name)
+                    list_dict = []
+                    for p in list:
+                        list_dict.append(player_to_dict(p.id))
+                    return {"username": get_user_by_email(email).name,
+                            "game_name": game_name,
+                            "max_players": game.max_players,
+                            "players": list_dict}
+                else:
+                    raise HTTPException(
+                        status_code=404,
+                        detail="The room is full")
+            else:
+                delete_player(player_id)
+                raise HTTPException(
+                    status_code=404,
+                    detail="Player already in the game")
     else:
         raise HTTPException(
             status_code=404,
