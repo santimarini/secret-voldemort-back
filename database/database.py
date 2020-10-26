@@ -16,6 +16,7 @@ class User(db.Entity):
     players = Set('Player')
     finished_games = Set('Finishedgames')
 
+#Players table
 class Player(db.Entity):
     id = PrimaryKey(int, auto=True)
     username = Required(str)
@@ -25,10 +26,12 @@ class Player(db.Entity):
     user1 = Required(User)
     actualGame = Optional('Game')
 
+#Finished games table
 class Finishedgames(db.Entity):
     gameinfo = Required(str) #solo para probar, porque falta definir que informacion queremos guardar de una partida
     users = Set(User)
 
+#Games table
 class Game(db.Entity):
     name = Required(str, unique=True)
     creation_date = Required(datetime) #datetime es un tipo de python, no de ponyorm
@@ -37,6 +40,21 @@ class Game(db.Entity):
     max_players = Required(int)
     creator = Required(str)
     players = Set(Player)
+    turn = Optional('Turn')
+
+#Turns table
+class Turn(db.Entity):
+    game = Required(Game)
+    num_of_turn = Required(int)
+    elect_marker = Required(int)
+    previous_min = Optional(int)
+    previous_dir = Optional(int)
+    post_min = Required(int) #cuando se crea un turno siempre hay un min. de magia
+    post_dir = Optional(int)
+    elect_min = Optional(int)
+    elect_dir = Optional(int)
+    Pos_votes = Optional(int)
+    Neg_votes = Optional(int)
 
 db.generate_mapping(create_tables=True)
 
@@ -139,3 +157,46 @@ def player_to_dict(player_id):
             loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
             actualGame = p.actualGame.name)
     return dict_p
+
+#Creates a new turn
+@pony.orm.db_session
+def new_turn(game_name,player_id):
+    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0, post_min = player_id)
+    commit()
+    return t.id
+
+@pony.orm.db_session
+def next_turn(turn_id):
+    Turn[turn_id].num_of_turn += 1
+
+@pony.orm.db_session
+def increment_marker(turn_id):
+    Turn[turn_id].elect_marker += 1
+
+@pony.orm.db_session
+def set_previous_min(turn_id,player_id):
+    Turn[turn_id].previous_min = player_id
+
+@pony.orm.db_session
+def set_previous_dir(turn_id,player_id):
+    Turn[turn_id].previous_dir = player_id
+
+@pony.orm.db_session
+def set_post_min(turn_id,player_id):
+    Turn[turn_id].post_min = player_id
+
+@pony.orm.db_session
+def set_post_dir(turn_id,player_id):
+    Turn[turn_id].post_dir = player_id
+
+@pony.orm.db_session
+def set_elect_min(turn_id,player_id):
+    Turn[turn_id].elect_min = player_id
+
+@pony.orm.db_session
+def set_elect_dir(turn_id,player_id):
+    Turn[turn_id].elect_dir = player_id
+
+@pony.orm.db_session
+def get_turn(turn_id):
+    return(Turn[turn_id])
