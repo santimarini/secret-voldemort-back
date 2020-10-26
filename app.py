@@ -59,8 +59,8 @@ async def create_game(game: ConfigGame):
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
-        game_name = new_game(game.name, game.max_players)
-        return {"name": game_name}
+        game_name = new_game(game.name, game.max_players, game.email)
+        return {"name": game_name }
 
 # Entry of url to join the game
 @app.post("/game/{game_name}")
@@ -83,7 +83,8 @@ async def join_url(game_name: str, email: str):
                     return {"username": get_user_by_email(email).name,
                             "game_name": game_name,
                             "max_players": game.max_players,
-                            "players": list_dict}
+                            "players": list_dict,
+                            "creator": game.creator}
                 else:
                     raise HTTPException(
                         status_code=404,

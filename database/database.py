@@ -35,6 +35,7 @@ class Game(db.Entity):
     initial_date = Optional(datetime)
     end_date = Optional(datetime)
     max_players = Required(int)
+    creator = Required(str)
     players = Set(Player)
 
 db.generate_mapping(create_tables=True)
@@ -64,8 +65,9 @@ def email_exists(email_address):
 
 #creates a new game
 @pony.orm.db_session
-def new_game(name,max_players):
-    game1 = Game(name=name,creation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),max_players=max_players)
+def new_game(name,max_players,email):
+    game1 = Game(name=name,creation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                 max_players=max_players, creator=email)
     return game1.name
 
 
@@ -90,7 +92,6 @@ def get_game_by_name(name):
     return(g1)
 
 #<precondition: player and game exists>
-
 @pony.orm.db_session
 def join_game(player_id,game_name):
     g1 = get_game_by_name(game_name)
@@ -99,7 +100,12 @@ def join_game(player_id,game_name):
 #<precondition: game exists>
 @pony.orm.db_session
 def num_of_players(game_name):
-    return(count(get_game_by_name(game_name).players))
+    return(len(get_player_list(game_name)))
+
+@pony.orm.db_session
+def num_of_players_alive(game_name):
+    list_a = filter(lambda p: p.is_alive, get_player_list(game_name))
+    return(len(list(list_a)))
 
 #return true if the user is in the game
 @pony.orm.db_session
@@ -122,6 +128,7 @@ def get_player_list(game_name):
     for p in get_game_by_name(game_name).players:
         player = Player[p.id]
         list.append(player)
+    list.sort(key = lambda p: p.id)
     return list
 
 #transform a player object in a dict
