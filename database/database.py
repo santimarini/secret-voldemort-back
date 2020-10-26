@@ -49,7 +49,7 @@ class Turn(db.Entity):
     elect_marker = Required(int)
     previous_min = Optional(int)
     previous_dir = Optional(int)
-    post_min = Required(int) #cuando se crea un turno siempre hay un min. de magia
+    post_min = Optional(int)
     post_dir = Optional(int)
     elect_min = Optional(int)
     elect_dir = Optional(int)
@@ -87,6 +87,11 @@ def new_game(name,max_players,email):
     game1 = Game(name=name,creation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
                  max_players=max_players, creator=email)
     return game1.name
+
+@pony.orm.db_session
+def set_game_started(game_name):
+    game = Game.get(name=game_name)
+    game.initial_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 #verify if certain game exists
@@ -160,10 +165,15 @@ def player_to_dict(player_id):
 
 #Creates a new turn
 @pony.orm.db_session
-def new_turn(game_name,player_id):
-    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0, post_min = player_id)
+def new_turn(game_name):
+    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0)
     commit()
     return t.id
+
+#return turn asociate a game_name
+@pony.orm.db_session
+def get_turn_by_gamename(game_name):
+    return(get_game_by_name(game_name).turn.id)
 
 @pony.orm.db_session
 def next_turn(turn_id):
@@ -200,3 +210,13 @@ def set_elect_dir(turn_id,player_id):
 @pony.orm.db_session
 def get_turn(turn_id):
     return(Turn[turn_id])
+
+
+@pony.orm.db_session
+def get_next_player_to_min(game_name, last_min):
+    list_player_alive = list(filter(lambda p: p.is_alive, get_player_list(game_name)))
+    n = len(list_player_alive)
+    if last_min is None or (list_player_alive.index(Player[last_min]) == n-1):
+        return list_player_alive[0].id
+    else:
+        return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)

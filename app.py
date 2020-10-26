@@ -98,3 +98,37 @@ async def join_url(game_name: str, email: str):
         raise HTTPException(
             status_code=404,
             detail="Game is not exists")
+
+@app.post("/start")
+async def start_game(game_name: str):
+    set_game_started(game_name)
+    new_turn(game_name)
+    #configuracion de tablero
+    #asignacion de roles
+    #asignacion de lealtades
+    return {
+        "game started!"
+    }
+
+@app.post("/new_turn")
+async def new_turn_begin(game_name: str):
+    turn_id = get_turn_by_gamename(game_name)
+    next_turn(turn_id)
+    ## Este endpoint podria recibir tambien un model hechizo y setear el min postulado
+    turn = get_turn(turn_id)
+    next_id_min = get_next_player_to_min(game_name, turn.previous_min)
+    set_post_min(turn_id, next_id_min)
+    player_min = player_to_dict(next_id_min)
+    return {
+        "ministro_postulado_actual": player_min
+    }
+
+@app.post("/pass_turn")
+async def pass_turn(game_name: str):
+    turn_id = get_turn_by_gamename(game_name)
+    turn = get_turn(turn_id)
+    actual_min_id = turn.post_min
+    set_previous_min(turn_id, actual_min_id)
+    return {
+        "turno pasado!"
+    }
