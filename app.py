@@ -97,3 +97,27 @@ async def join_url(game_name: str, email: str):
         raise HTTPException(
             status_code=404,
             detail="Game is not exists")
+
+@app.post("/start")
+async def start_game(game_name: str):
+    set_game_started(game_name)
+    #new_turn(game_name)
+    new_deck(game_name)
+    shuffle_cards(game_name)
+    #configuracion de tablero
+    #asignacion de roles
+    #asignacion de lealtades
+    return {
+        "game started!"
+    }
+
+
+@app.post("/cards/draw")
+async def join_url(game_name: str):
+    if(num_of_cards_in_steal_stack(game_name) < 3):
+        shuffle_cards(game_name)
+    list_of_cards_id = get_cards_in_game(game_name)
+    return {"first_card" : card_to_dict(list_of_cards_id.pop()),
+           "second_card" : card_to_dict(list_of_cards_id.pop()),
+           "third_card" : card_to_dict(list_of_cards_id.pop())
+           }

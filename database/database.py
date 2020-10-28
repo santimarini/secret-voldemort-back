@@ -98,6 +98,12 @@ def get_game_by_name(name):
     g1 = Game.get(name=name)
     return(g1)
 
+#set the initial_date of a game when is started
+@pony.orm.db_session
+def set_game_started(game_name):
+    game = Game.get(name=game_name)
+    game.initial_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
 #<precondition: player and game exists>
 
 @pony.orm.db_session
