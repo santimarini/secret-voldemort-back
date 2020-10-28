@@ -1,5 +1,7 @@
 from pony.orm import *
 from datetime import datetime
+from collections import deque
+import random
 
 db = pony.orm.Database()
 
@@ -36,6 +38,13 @@ class Game(db.Entity):
     end_date = Optional(datetime)
     max_players = Required(int)
     players = Set(Player)
+    proclamation = Set('Proclamation')
+
+class Proclamation(db.Entity):
+    loyalty = Required(str)
+    deck = Required(str)
+    position = Required(int)
+    actualGame = Optional(Game)
 
 db.generate_mapping(create_tables=True)
 
@@ -132,3 +141,75 @@ def player_to_dict(player_id):
             loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
             actualGame = p.actualGame.name)
     return dict_p
+
+#create a deck when game is starting, all cards are default "Pila de robo"
+@pony.orm.db_session
+def new_deck(game_name):
+    game = get_game_by_name(game_name)
+    mortifagos = 11
+    ofenix = 6
+    for i in range(mortifagos):
+        proclam = Proclamation(loyalty="Mortifagos", deck="Pila de robo",
+                     position=i+1, actualGame=game)
+        game.proclamation.add(proclam)
+    for i in range(ofenix):
+        proclam = Proclamation(loyalty="Orden del Fenix", deck="Pila de robo",
+                     position=i+12, actualGame=game)
+        game.proclamation.add(proclam)
+
+#shuffling cards, this function must be call when the game is starting and when
+#need get three cards in the steal stack and this have less than three
+@pony.orm.db_session
+def shuffle_cards(game_name):
+    cards = []
+    for i in get_game_by_name(game_name).proclamation:
+        if i.deck != "Proclamada":
+            cards.append(i)
+    random.shuffle(cards)
+    j = 1
+    for i in cards:
+        i.position = j
+        j += 1
+    cards.sort(key=lambda c: c.position, reverse=True)
+    return cards
+
+#return a list of ids cards in the steal stack
+@pony.orm.db_session
+def get_cards_in_game(game_name):
+    cards = []
+    cards_id = []
+    for i in get_game_by_name(game_name).proclamation:
+        if ((i.deck != "Proclamada") and (i.deck != "Descartada")):
+            cards.append(i)
+    cards.sort(key=lambda c: c.position, reverse=True)
+    for i in cards:
+        cards_id.append(i.id)
+    return cards_id
+
+#return a object Proclamation by id, this function must be call in the legislative session and
+#when guess speel has invoke
+@pony.orm.db_session
+def get_card_in_the_steal_stack(id_card):
+    return Proclamation[id_card]
+
+#set a Proclamation as "Descartada" ie this card will be in "Descartdas" deck
+@pony.orm.db_session
+def discard(id_card):
+    card = Proclamation[id_card]
+    card.deck = "Descartada"
+
+#set a Proclamation as "Proclamada" ie this card will be in the corresponding board
+@pony.orm.db_session
+def proclam(id_card):
+    card = Proclamation[id_card]
+    card.deck = "Proclamada"
+
+#return number of cards in the steal stack
+@pony.orm.db_session
+def num_of_cards_in_steal_stack(game_name):
+    n = 0
+    for i in get_game_by_name(game_name).proclamation:
+        if i.deck == "Pila de robo":
+            n += 1
+    return n
+
