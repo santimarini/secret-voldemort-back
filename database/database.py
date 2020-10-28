@@ -251,6 +251,12 @@ def increment_pos_votes(turn_id):
     return turn.Pos_votes
 
 @pony.orm.db_session
+def set_vote_to_zero(turn_id):
+    turn = get_turn(turn_id)
+    turn.Pos_votes = 0
+    turn.Neg_votes = 0
+
+@pony.orm.db_session
 def increment_neg_votes(turn_id):
     turn = get_turn(turn_id)
     if turn.Neg_votes is None:

@@ -140,6 +140,9 @@ async def vote_player(game_name: str, vote: bool):
             marker_to_zero(turn_id)
             set_elect_min(turn_id, get_post_min(turn_id))
             set_elect_dir(turn_id, get_post_dir(turn_id))
+            set_previous_min(turn_id, get_elect_min(turn_id))
+            set_previous_dir(turn_id, get_elect_dir(turn_id))
+            set_vote_to_zero(turn_id)
             return{"elect_min": get_elect_min(turn_id),
                    "elect_dir": get_elect_dir(turn_id)}
         # most negative votes
@@ -148,11 +151,21 @@ async def vote_player(game_name: str, vote: bool):
             set_previous_min(turn_id, get_post_min(turn_id))
             set_elect_dir(turn_id, None)
             set_elect_min(turn_id, None)
+            set_previous_min(turn_id, get_elect_min(turn_id))
+            set_previous_dir(turn_id, get_elect_dir(turn_id))
+            set_vote_to_zero(turn_id)
+            return{"status_vote": "there was no consensus, "
+                                  "the election marker advances one place",
+                   "mark_election": get_turn(turn_id).elect_marker}
     else:
-        return None
+        return{"cant_vote": get_total_votes(turn_id),
+               "vote": vote,
+               "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))}
 
 @app.put("/game/{game_name}/dir")
 async def dir_post(game_name: str, dir: int):
     turn_id = get_turn_by_gamename(game_name)
     set_post_dir(turn_id, dir)
-    return "Ok"
+    dir_dict = player_to_dict(dir)
+    return{"postulated_director": dir_dict,
+           "postulated minister": player_to_dict(get_post_min(turn_id))}
