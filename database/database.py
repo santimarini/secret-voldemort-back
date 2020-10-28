@@ -157,16 +157,19 @@ def get_player_list(game_name):
 #transform a player object in a dict
 @pony.orm.db_session
 def player_to_dict(player_id):
-    p = Player[player_id]
-    dict_p = dict(id = p.id, username = p.username, is_alive = p.is_alive,
-            loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
-            actualGame = p.actualGame.name)
-    return dict_p
+    if player_id is None:
+        return None
+    else:
+        p = Player[player_id]
+        dict_p = dict(id = p.id, username = p.username, is_alive = p.is_alive,
+                    loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
+                    actualGame = p.actualGame.name)
+        return dict_p
 
 #Creates a new turn
 @pony.orm.db_session
 def new_turn(game_name):
-    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0)
+    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0, post_min = None)
     commit()
     return t.id
 
@@ -194,6 +197,7 @@ def set_previous_dir(turn_id,player_id):
 @pony.orm.db_session
 def set_post_min(turn_id,player_id):
     Turn[turn_id].post_min = player_id
+    commit()
 
 @pony.orm.db_session
 def set_post_dir(turn_id,player_id):
@@ -211,7 +215,6 @@ def set_elect_dir(turn_id,player_id):
 def get_turn(turn_id):
     return(Turn[turn_id])
 
-
 @pony.orm.db_session
 def get_next_player_to_min(game_name, last_min):
     list_player_alive = list(filter(lambda p: p.is_alive, get_player_list(game_name)))
@@ -220,3 +223,21 @@ def get_next_player_to_min(game_name, last_min):
         return list_player_alive[0].id
     else:
         return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)
+
+@pony.orm.db_session
+def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
+    turn = get_turn(turn_id)
+    if ((turn.elect_min is None) and (turn.elect_dir is None)):
+        return list(filter(lambda p: p.is_alive and turn.post_min != p.id, get_player_list(game_name)))
+    else:
+        list_a = filter(lambda p: p.is_alive and turn.post_min != p.id and
+                            turn.elect_dir != p.id and turn.elect_min != p.id,
+                            get_player_list(game_name))
+        return (list(list_a))
+
+@pony.orm.db_session
+def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
+    turn = get_turn(turn_id)
+    list_a = filter(lambda p: p.is_alive and turn.post_min != p.id,
+                        get_player_list(game_name))
+    return (list(list_a))
