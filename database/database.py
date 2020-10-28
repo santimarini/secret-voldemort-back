@@ -213,3 +213,9 @@ def num_of_cards_in_steal_stack(game_name):
             n += 1
     return n
 
+@pony.orm.db_session
+def card_to_dict(card_id):
+    c = Proclamation[card_id]
+    dict_c = dict(id = c.id, loyalty = c.loyalty, deck = c.deck,
+            position = c.position, adtualGame = c.actualGame.id)
+    return dict_c
