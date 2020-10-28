@@ -110,7 +110,7 @@ async def start_game(game_name: str):
         "game started!"
     }
 
-@app.post("/new_turn")
+@app.post("/next_turn")
 async def new_turn_begin(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
     next_turn(turn_id)
