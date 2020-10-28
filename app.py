@@ -130,29 +130,6 @@ async def new_turn_begin(game_name: str):
         for p in list_player:
             list_player_dict.append(player_to_dict(p.id))
     return {
-        "ministro_postulado_actual": player_min,
-        "jugadores_disponibles": list_player_dict
-    }
-
-@app.post("/pass_turn")
-async def pass_turn(game_name: str, vote: bool, dir_id: int):
-    turn_id = get_turn_by_gamename(game_name)
-    set_post_dir(turn_id,dir_id)
-    turn = get_turn(turn_id)
-    if vote:
-        actual_min_id = turn.post_min
-        actual_dir_id = turn.post_dir
-        set_elect_min(turn_id, actual_min_id)
-        set_previous_min(turn_id, actual_min_id)
-        set_elect_dir(turn_id, actual_dir_id)
-        set_previous_dir(turn_id,actual_dir_id)
-    else:
-        actual_min_id = turn.post_min
-        actual_dir_id = turn.post_dir
-        set_elect_min(turn_id, None)
-        set_elect_dir(turn_id, None)
-        set_previous_min(turn_id, actual_min_id)
-        set_previous_dir(turn_id, actual_dir_id)
-    return {
-        "turno pasado!"
+        "minister": player_min,
+        "players": list_player_dict
     }
