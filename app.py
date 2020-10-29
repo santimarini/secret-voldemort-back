@@ -59,8 +59,8 @@ async def create_game(game: ConfigGame):
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
-        game_name = new_game(game.name, game.max_players)
-        return {"name": game_name}
+        game_name = new_game(game.name, game.max_players, game.email)
+        return {"name": game_name }
 
 # Entry of url to join the game
 @app.post("/game/{game_name}")
@@ -83,7 +83,8 @@ async def join_url(game_name: str, email: str):
                     return {"username": get_user_by_email(email).name,
                             "game_name": game_name,
                             "max_players": game.max_players,
-                            "players": list_dict}
+                            "players": list_dict,
+                            "creator": game.creator}
                 else:
                     raise HTTPException(
                         status_code=404,
@@ -97,3 +98,38 @@ async def join_url(game_name: str, email: str):
         raise HTTPException(
             status_code=404,
             detail="Game is not exists")
+
+@app.post("/start")
+async def start_game(game_name: str):
+    set_game_started(game_name)
+    new_turn(game_name)
+    #configuracion de tablero
+    #asignacion de roles
+    #asignacion de lealtades
+    return {
+        "game started!"
+    }
+
+@app.post("/next_turn")
+async def new_turn_begin(game_name: str):
+    turn_id = get_turn_by_gamename(game_name)
+    next_turn(turn_id)
+    ## Este endpoint podria recibir tambien un model hechizo y setear el min postulado
+    turn = get_turn(turn_id)
+    next_id_min = get_next_player_to_min(game_name, turn.previous_min)
+    set_post_min(turn_id, next_id_min)
+    player_min = player_to_dict(next_id_min)
+    if num_of_players_alive(game_name) > 5:
+        list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
+        list_player_dict = []
+        for p in list_player:
+            list_player_dict.append(player_to_dict(p.id))
+    else:
+        list_player = get_players_avaibles_to_elect_less_5players(game_name,turn_id)
+        list_player_dict = []
+        for p in list_player:
+            list_player_dict.append(player_to_dict(p.id))
+    return {
+        "minister": player_min,
+        "players": list_player_dict
+    }
