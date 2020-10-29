@@ -187,6 +187,10 @@ def increment_marker(turn_id):
     Turn[turn_id].elect_marker += 1
 
 @pony.orm.db_session
+def marker_to_zero(turn_id):
+    Turn[turn_id].elect_marker = 0
+
+@pony.orm.db_session
 def set_previous_min(turn_id,player_id):
     Turn[turn_id].previous_min = player_id
 
@@ -197,7 +201,6 @@ def set_previous_dir(turn_id,player_id):
 @pony.orm.db_session
 def set_post_min(turn_id,player_id):
     Turn[turn_id].post_min = player_id
-    commit()
 
 @pony.orm.db_session
 def set_post_dir(turn_id,player_id):
@@ -225,6 +228,60 @@ def get_next_player_to_min(game_name, last_min):
         return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)
 
 @pony.orm.db_session
+def get_post_min(turn_id):
+    return Turn[turn_id].post_min
+
+@pony.orm.db_session
+def get_post_dir(turn_id):
+    return Turn[turn_id].post_dir
+
+@pony.orm.db_session
+def get_elect_min(turn_id):
+    return Turn[turn_id].elect_min
+
+@pony.orm.db_session
+def get_elect_dir(turn_id):
+    return Turn[turn_id].elect_dir
+
+@pony.orm.db_session
+def increment_pos_votes(turn_id):
+    turn = get_turn(turn_id)
+    if turn.Pos_votes is None:
+        turn.Pos_votes = 1
+    else:
+        turn.Pos_votes = turn.Pos_votes + 1
+    return turn.Pos_votes
+
+@pony.orm.db_session
+def set_vote_to_zero(turn_id):
+    turn = get_turn(turn_id)
+    turn.Pos_votes = 0
+    turn.Neg_votes = 0
+
+@pony.orm.db_session
+def increment_neg_votes(turn_id):
+    turn = get_turn(turn_id)
+    if turn.Neg_votes is None:
+        turn.Neg_votes = 1
+    else:
+        turn.Neg_votes = turn.Neg_votes + 1
+    return turn.Neg_votes
+
+@pony.orm.db_session
+def get_total_votes(turn_id):
+    turn = get_turn(turn_id)
+    if turn.Neg_votes is None:
+        turn.Neg_votes = 0
+    if turn.Pos_votes is None:
+        turn.Pos_votes = 0
+    return turn.Neg_votes + turn.Pos_votes
+
+@pony.orm.db_session
+def get_status_vote(turn_id):
+    turn = get_turn(turn_id)
+    return turn.Neg_votes < turn.Pos_votes
+
+@pony.orm.db_session  
 def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
     turn = get_turn(turn_id)
     if ((turn.elect_min is None) and (turn.elect_dir is None)):
