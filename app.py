@@ -143,20 +143,19 @@ async def vote_player(game_name: str, vote: bool):
             set_previous_min(turn_id, get_elect_min(turn_id))
             set_previous_dir(turn_id, get_elect_dir(turn_id))
             set_vote_to_zero(turn_id)
-            return{"elect_min": get_elect_min(turn_id),
-                   "elect_dir": get_elect_dir(turn_id)}
-        # most negative votes
+            return {"elect_min": player_to_dict(get_elect_min(turn_id)),
+                    "elect_dir": player_to_dict(get_elect_dir(turn_id))}
+            # most negative votes
         else:
             increment_marker(turn_id)
-            set_previous_min(turn_id, get_post_min(turn_id))
             set_elect_dir(turn_id, None)
             set_elect_min(turn_id, None)
-            set_previous_min(turn_id, get_elect_min(turn_id))
-            set_previous_dir(turn_id, get_elect_dir(turn_id))
+            set_previous_min(turn_id, get_post_min(turn_id))
+            set_previous_dir(turn_id, get_post_dir(turn_id))
             set_vote_to_zero(turn_id)
-            return{"status_vote": "there was no consensus, "
-                                  "the election marker advances one place",
-                   "mark_election": get_turn(turn_id).elect_marker}
+            return {"status_vote": "there was no consensus, "
+                                   "the election marker advances one place",
+                    "mark_election": get_turn(turn_id).elect_marker}
     else:
         return{"cant_vote": get_total_votes(turn_id),
                "vote": vote,
