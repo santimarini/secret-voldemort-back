@@ -102,28 +102,29 @@ async def start_game(game_name: str):
         "game started!"
     }
 
-@app.post("/new_turn")
+
+@app.post("/next_turn")
 async def new_turn_begin(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
     next_turn(turn_id)
     ## Este endpoint podria recibir tambien un model hechizo y setear el min postulado
     turn = get_turn(turn_id)
     next_id_min = get_next_player_to_min(game_name, turn.previous_min)
-    print(next_id_min)
     set_post_min(turn_id, next_id_min)
     player_min = player_to_dict(next_id_min)
+    if num_of_players_alive(game_name) > 5:
+        list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
+        list_player_dict = []
+        for p in list_player:
+            list_player_dict.append(player_to_dict(p.id))
+    else:
+        list_player = get_players_avaibles_to_elect_less_5players(game_name,turn_id)
+        list_player_dict = []
+        for p in list_player:
+            list_player_dict.append(player_to_dict(p.id))
     return {
-        "ministro_postulado_actual": player_min
-    }
-
-@app.post("/pass_turn")
-async def pass_turn(game_name: str):
-    turn_id = get_turn_by_gamename(game_name)
-    turn = get_turn(turn_id)
-    actual_min_id = turn.post_min
-    set_previous_min(turn_id, actual_min_id)
-    return {
-        "turno pasado!"
+        "minister": player_min,
+        "players": list_player_dict
     }
 
 @app.put("/game/{game_name}/vote")
@@ -159,7 +160,8 @@ async def vote_player(game_name: str, vote: bool):
     else:
         return{"cant_vote": get_total_votes(turn_id),
                "vote": vote,
-               "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))}
+               "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
+              }
 
 @app.put("/game/{game_name}/dir")
 async def dir_post(game_name: str, dir: int):
@@ -167,4 +169,6 @@ async def dir_post(game_name: str, dir: int):
     set_post_dir(turn_id, dir)
     dir_dict = player_to_dict(dir)
     return{"postulated_director": dir_dict,
-           "postulated minister": player_to_dict(get_post_min(turn_id))}
+           "postulated minister": player_to_dict(get_post_min(turn_id))
+          }
+

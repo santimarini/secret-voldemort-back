@@ -157,16 +157,19 @@ def get_player_list(game_name):
 #transform a player object in a dict
 @pony.orm.db_session
 def player_to_dict(player_id):
-    p = Player[player_id]
-    dict_p = dict(id = p.id, username = p.username, is_alive = p.is_alive,
-            loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
-            actualGame = p.actualGame.name)
-    return dict_p
+    if player_id is None:
+        return None
+    else:
+        p = Player[player_id]
+        dict_p = dict(id = p.id, username = p.username, is_alive = p.is_alive,
+                    loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
+                    actualGame = p.actualGame.name)
+        return dict_p
 
 #Creates a new turn
 @pony.orm.db_session
 def new_turn(game_name):
-    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0)
+    t = Turn(game = get_game_by_name(game_name), num_of_turn = 0, elect_marker = 0, post_min = None)
     commit()
     return t.id
 
@@ -214,7 +217,6 @@ def set_elect_dir(turn_id,player_id):
 @pony.orm.db_session
 def get_turn(turn_id):
     return(Turn[turn_id])
-
 
 @pony.orm.db_session
 def get_next_player_to_min(game_name, last_min):
@@ -278,3 +280,21 @@ def get_total_votes(turn_id):
 def get_status_vote(turn_id):
     turn = get_turn(turn_id)
     return turn.Neg_votes < turn.Pos_votes
+
+@pony.orm.db_session  
+def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
+    turn = get_turn(turn_id)
+    if ((turn.elect_min is None) and (turn.elect_dir is None)):
+        return list(filter(lambda p: p.is_alive and turn.post_min != p.id, get_player_list(game_name)))
+    else:
+        list_a = filter(lambda p: p.is_alive and turn.post_min != p.id and
+                            turn.elect_dir != p.id and turn.elect_min != p.id,
+                            get_player_list(game_name))
+        return (list(list_a))
+
+@pony.orm.db_session
+def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
+    turn = get_turn(turn_id)
+    list_a = filter(lambda p: p.is_alive and turn.post_min != p.id,
+                        get_player_list(game_name))
+    return (list(list_a))
