@@ -148,18 +148,18 @@ def player_to_dict(player_id):
             actualGame = p.actualGame.name)
     return dict_p
 
-#create a deck when game is starting, all cards are default "Pila de robo"
+#create a deck when game is starting, all cards are default "Available"
 @pony.orm.db_session
 def new_deck(game_name):
     game = get_game_by_name(game_name)
     mortifagos = 11
     ofenix = 6
     for i in range(mortifagos):
-        proclam = Proclamation(loyalty="Mortifagos", deck="Pila de robo",
+        proclam = Proclamation(loyalty="Death Eaters", deck="Available",
                      position=i+1, actualGame=game)
         game.proclamation.add(proclam)
     for i in range(ofenix):
-        proclam = Proclamation(loyalty="Orden del Fenix", deck="Pila de robo",
+        proclam = Proclamation(loyalty="Fenix Order", deck="Available",
                      position=i+12, actualGame=game)
         game.proclamation.add(proclam)
 
@@ -169,7 +169,7 @@ def new_deck(game_name):
 def shuffle_cards(game_name):
     cards = []
     for i in get_game_by_name(game_name).proclamation:
-        if i.deck != "Proclamada":
+        if i.deck != "Proclaimed":
             cards.append(i)
     random.shuffle(cards)
     j = 1
@@ -185,7 +185,7 @@ def get_cards_in_game(game_name):
     cards = []
     cards_id = []
     for i in get_game_by_name(game_name).proclamation:
-        if ((i.deck != "Proclamada") and (i.deck != "Descartada")):
+        if ((i.deck != "Proclaimed") and (i.deck != "Discarded")):
             cards.append(i)
     cards.sort(key=lambda c: c.position, reverse=True)
     for i in cards:
@@ -198,24 +198,24 @@ def get_cards_in_game(game_name):
 def get_card_in_the_steal_stack(id_card):
     return Proclamation[id_card]
 
-#set a Proclamation as "Descartada" ie this card will be in "Descartdas" deck
+#set a Proclamation as "Discarded" ie this card will be in "Discarded" deck
 @pony.orm.db_session
 def discard(id_card):
     card = Proclamation[id_card]
-    card.deck = "Descartada"
+    card.deck = "Discarded"
 
-#set a Proclamation as "Proclamada" ie this card will be in the corresponding board
+#set a Proclamation as "Proclaimed" ie this card will be in the corresponding board
 @pony.orm.db_session
-def proclam(id_card):
+def proclaim(id_card):
     card = Proclamation[id_card]
-    card.deck = "Proclamada"
+    card.deck = "Proclaimed"
 
 #return number of cards in the steal stack
 @pony.orm.db_session
 def num_of_cards_in_steal_stack(game_name):
     n = 0
     for i in get_game_by_name(game_name).proclamation:
-        if i.deck == "Pila de robo":
+        if i.deck == "Available":
             n += 1
     return n
 

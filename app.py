@@ -111,13 +111,28 @@ async def start_game(game_name: str):
         "game started!"
     }
 
-
-@app.post("/cards/draw")
+@app.get("/cards/draw")
 async def join_url(game_name: str):
     if(num_of_cards_in_steal_stack(game_name) < 3):
         shuffle_cards(game_name)
     list_of_cards_id = get_cards_in_game(game_name)
-    return {"first_card" : card_to_dict(list_of_cards_id.pop()),
-           "second_card" : card_to_dict(list_of_cards_id.pop()),
-           "third_card" : card_to_dict(list_of_cards_id.pop())
-           }
+    cards_list = []
+    for c in range(3):
+        cards_list.append(card_to_dict(list_of_cards_id.pop()))
+    return {"cards_list" : cards_list}
+
+#hay que usar async?
+@app.get("cards/discard")
+async def discard_card(card_id):
+    discard(card_id)
+    return {"card Discarded"}
+
+@app.get("cards/discard2")
+async def discard_card(card_id):
+    discard(card_id)
+    return {"card Discarded"}
+
+@app.put("cards/proclaim")
+async def proclaim_card(card_id):
+    proclaim(card_id)
+    return {"card proclaimed"}
