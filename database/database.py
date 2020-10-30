@@ -44,12 +44,7 @@ class Game(db.Entity):
     players = Set(Player)
     turn = Optional('Turn')
     proclamation = Set('Proclamation')
-
-class Proclamation(db.Entity):
-    loyalty = Required(str)
-    deck = Required(str)
-    position = Required(int)
-    actualGame = Optional(Game)
+    box = Set('Box')
 
 #Turns table
 class Turn(db.Entity):
@@ -64,6 +59,19 @@ class Turn(db.Entity):
     elect_dir = Optional(int)
     Pos_votes = Optional(int)
     Neg_votes = Optional(int)
+
+class Proclamation(db.Entity):
+    loyalty = Required(str)
+    deck = Required(str)
+    position = Required(int)
+    actualGame = Optional(Game)
+
+class Box(db.Entity):
+    loyalty = Required(str)
+    position = Required(int)
+    spell = Optional(str)
+    is_used = Required(bool)
+    actualGame = Optional(Game)
 
 db.generate_mapping(create_tables=True)
 
@@ -392,3 +400,83 @@ def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
     list_a = filter(lambda p: p.is_alive and turn.post_min != p.id,
                         get_player_list(game_name))
     return (list(list_a))
+
+@pony.orm.db_session
+def new_templates(game_name):
+    game = get_game_by_name(game_name)
+    for i in range(5):
+        box = Box(loyalty="Fenix Order", position=i+1, is_used=False)
+        game.box.add(box)
+    for i in range(6):
+        box = Box(loyalty="Death Eaters", position=i+1, is_used=False)
+        game.box.add(box)
+
+@pony.orm.db_session
+def get_template_death_e(game_name):
+    template_de = []
+    for i in get_game_by_name(game_name).box:
+        if i.loyalty == "Death Eaters":
+            template_de.append(i)
+    template_de.sort(key=lambda p: p.position)
+    return template_de
+
+@pony.orm.db_session
+def get_template_order_f(game_name):
+    template_de = []
+    for i in get_game_by_name(game_name).box:
+        if i.loyalty == "Fenix Order":
+            template_de.append(i)
+    template_de.sort(key=lambda p: p.position)
+    return template_de
+
+@pony.orm.db_session
+def config_template_6players(game_name):
+    template_de = get_template_death_e(game_name)
+    template_de[2].spell = "Guess"
+    template_de[3].spell = "Avada Kedavra"
+    template_de[4].spell = "Avada Kedavra"
+
+@pony.orm.db_session
+def config_template_8players(game_name):
+    template_de = get_template_death_e(game_name)
+    template_de[1].spell = "Cruciatus"
+    template_de[2].spell = "Imperius"
+    template_de[3].spell = "Avada Kedavra"
+    template_de[4].spell = "Avada Kedavra"
+
+@pony.orm.db_session
+def config_template_10players(game_name):
+    template_de = get_template_death_e(game_name)
+    template_de[0].spell = "Cruciatus"
+    template_de[1].spell = "Cruciatus"
+    template_de[2].spell = "Imperius"
+    template_de[3].spell = "Avada Kedavra"
+    template_de[4].spell = "Avada Kedavra"
+
+@pony.orm.db_session
+def get_next_box(card_id,game_name):
+    card = Proclamation[card_id]
+    if card.loyalty == "Fenix Order":
+        template = get_template_order_f(game_name)
+        for i in template:
+            if (not i.is_used):
+                box = i
+                break
+    else:
+        template = get_template_death_e(game_name)
+        for i in template:
+            if (not i.is_used):
+                box = i
+                break
+    return box.id
+
+@pony.orm.db_session
+def box_to_dict(box_id):
+    b = Box[box_id]
+    dict_b = dict(id = b.id, loyalty = b.loyalty, position = b.position,
+                  spell = b.spell, is_used = b.is_used, actualGame = b.actualGame.id)
+    return dict_b
+
+@pony.orm.db_session
+def set_used_box(box_id):
+    Box[box_id].is_used = True

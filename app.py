@@ -93,11 +93,24 @@ async def join_url(game_name: str, email: str):
 
 @app.post("/start")
 async def start_game(game_name: str):
+    if num_of_players(game_name) < 5:
+        raise HTTPException(status_code=403, detail="There aren't enough players")
     set_game_started(game_name)
+    new_turn(game_name)
     new_deck(game_name)
     shuffle_cards(game_name)
-    new_turn(game_name)
-    #configuracion de tablero
+    new_templates(game_name)
+    np = num_of_players(game_name)
+    print(np)
+    if np == 5 or np == 6:
+        print("5 o 6 jugadores")
+        config_template_6players(game_name)
+    if np == 7 or np == 8:
+        print("7 o 8 jugadores")
+        config_template_8players(game_name)
+    if np == 9 or np == 10:
+        print("9 o 10 jugadores")
+        config_template_10players(game_name)
     #asignacion de roles
     #asignacion de lealtades
     return {
@@ -127,6 +140,15 @@ async def new_turn_begin(game_name: str):
         "minister": player_min,
         "players": list_player_dict
     }
+
+@app.put("/game/{game_name}/dir")
+async def dir_post(game_name: str, dir: int):
+    turn_id = get_turn_by_gamename(game_name)
+    set_post_dir(turn_id, dir)
+    dir_dict = player_to_dict(dir)
+    return{"postulated_director": dir_dict,
+           "postulated minister": player_to_dict(get_post_min(turn_id))
+          }
 
 @app.put("/game/{game_name}/vote")
 async def vote_player(game_name: str, vote: bool):
@@ -163,18 +185,9 @@ async def vote_player(game_name: str, vote: bool):
                "vote": vote,
                "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
               }
-
-@app.put("/game/{game_name}/dir")
-async def dir_post(game_name: str, dir: int):
-    turn_id = get_turn_by_gamename(game_name)
-    set_post_dir(turn_id, dir)
-    dir_dict = player_to_dict(dir)
-    return{"postulated_director": dir_dict,
-           "postulated minister": player_to_dict(get_post_min(turn_id))
-          }
   
 @app.get("/cards/draw")
-async def join_url(game_name: str):
+async def draw_cards(game_name: str):
     if(num_of_cards_in_steal_stack(game_name) < 3):
         shuffle_cards(game_name)
     list_of_cards_id = get_cards_in_game(game_name)
@@ -185,12 +198,30 @@ async def join_url(game_name: str):
 
 #hay que usar async?
 @app.get("/cards/discard")
-async def discard_card(card_id):
+async def discard_card(card_id: int):
     discard(card_id)
-    return {"card Discarded"}
+    card = card_to_dict(card_id)
+    return {"Proclamation": card}
 
 @app.put("/cards/proclaim")
-async def proclaim_card(card_id):
+async def proclaim_card(card_id,game_name):
+    turn_id = get_turn_by_gamename(game_name)
+    marker_to_zero(turn_id)
     proclaim(card_id)
-    return {"card proclaimed"}
+    box = get_next_box(card_id,game_name)
+    set_used_box(box)
+    return {
+        "box": box_to_dict(box)
+    }
 
+@app.get("/postulated")
+async def get_two(game_name: str):
+    turn_id = get_turn_by_gamename(game_name)
+    post_min_id = get_post_min(turn_id)
+    post_dir_id = get_post_dir(turn_id)
+    post_min = player_to_dict(post_min_id)
+    post_dir = player_to_dict(post_dir_id)
+    return {
+        "post_director": post_dir,
+        "post_minister": post_min
+    }
