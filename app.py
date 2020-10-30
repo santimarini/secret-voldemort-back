@@ -59,8 +59,8 @@ async def create_game(game: ConfigGame):
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
-        game_name = new_game(game.name, game.max_players)
-        return {"name": game_name}
+        game_name = new_game(game.name, game.max_players, game.email)
+        return {"name": game_name }
 
 # Entry of url to join the game
 @app.post("/game/{game_name}")
@@ -68,9 +68,7 @@ async def join_url(game_name: str, email: str):
     if game_exists(game_name):
         game = get_game_by_name(game_name)
         if game.initial_date is not None:
-            raise HTTPException(
-                status_code=404,
-                detail="The game has already started")
+            raise HTTPException(status_code=404, detail="The game has already started")
         else:
             player_id = new_player(email)
             if not is_user_in_game(email, game_name):
@@ -83,27 +81,22 @@ async def join_url(game_name: str, email: str):
                     return {"username": get_user_by_email(email).name,
                             "game_name": game_name,
                             "max_players": game.max_players,
-                            "players": list_dict}
+                            "players": list_dict,
+                            "creator": game.creator}
                 else:
-                    raise HTTPException(
-                        status_code=404,
-                        detail="The room is full")
+                    raise HTTPException(status_code=404, detail="The room is full")
             else:
                 delete_player(player_id)
-                raise HTTPException(
-                    status_code=404,
-                    detail="Player already in the game")
+                raise HTTPException(status_code=404, detail="Player already in the game")
     else:
-        raise HTTPException(
-            status_code=404,
-            detail="Game is not exists")
+        raise HTTPException(status_code=404, detail="Game is not exists")
 
 @app.post("/start")
 async def start_game(game_name: str):
     set_game_started(game_name)
-    #new_turn(game_name)
     new_deck(game_name)
     shuffle_cards(game_name)
+    new_turn(game_name)
     #configuracion de tablero
     #asignacion de roles
     #asignacion de lealtades
@@ -111,6 +104,75 @@ async def start_game(game_name: str):
         "game started!"
     }
 
+@app.post("/next_turn")
+async def new_turn_begin(game_name: str):
+    turn_id = get_turn_by_gamename(game_name)
+    next_turn(turn_id)
+    ## Este endpoint podria recibir tambien un model hechizo y setear el min postulado
+    turn = get_turn(turn_id)
+    next_id_min = get_next_player_to_min(game_name, turn.previous_min)
+    set_post_min(turn_id, next_id_min)
+    player_min = player_to_dict(next_id_min)
+    if num_of_players_alive(game_name) > 5:
+        list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
+        list_player_dict = []
+        for p in list_player:
+            list_player_dict.append(player_to_dict(p.id))
+    else:
+        list_player = get_players_avaibles_to_elect_less_5players(game_name,turn_id)
+        list_player_dict = []
+        for p in list_player:
+            list_player_dict.append(player_to_dict(p.id))
+    return {
+        "minister": player_min,
+        "players": list_player_dict
+    }
+
+@app.put("/game/{game_name}/vote")
+async def vote_player(game_name: str, vote: bool):
+    turn_id = get_turn_by_gamename(game_name)
+    # update the votes
+    if vote:
+        increment_pos_votes(turn_id)
+    else:
+        increment_neg_votes(turn_id)
+    if num_of_players_alive(game_name) == get_total_votes(turn_id):
+        # most positive votes
+        if get_status_vote(turn_id):
+            marker_to_zero(turn_id)
+            set_elect_min(turn_id, get_post_min(turn_id))
+            set_elect_dir(turn_id, get_post_dir(turn_id))
+            set_previous_min(turn_id, get_elect_min(turn_id))
+            set_previous_dir(turn_id, get_elect_dir(turn_id))
+            set_vote_to_zero(turn_id)
+            return {"elect_min": player_to_dict(get_elect_min(turn_id)),
+                    "elect_dir": player_to_dict(get_elect_dir(turn_id))}
+            # most negative votes
+        else:
+            increment_marker(turn_id)
+            set_elect_dir(turn_id, None)
+            set_elect_min(turn_id, None)
+            set_previous_min(turn_id, get_post_min(turn_id))
+            set_previous_dir(turn_id, get_post_dir(turn_id))
+            set_vote_to_zero(turn_id)
+            return {"status_vote": "there was no consensus, "
+                                   "the election marker advances one place",
+                    "mark_election": get_turn(turn_id).elect_marker}
+    else:
+        return{"cant_vote": get_total_votes(turn_id),
+               "vote": vote,
+               "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
+              }
+
+@app.put("/game/{game_name}/dir")
+async def dir_post(game_name: str, dir: int):
+    turn_id = get_turn_by_gamename(game_name)
+    set_post_dir(turn_id, dir)
+    dir_dict = player_to_dict(dir)
+    return{"postulated_director": dir_dict,
+           "postulated minister": player_to_dict(get_post_min(turn_id))
+          }
+  
 @app.get("/cards/draw")
 async def join_url(game_name: str):
     if(num_of_cards_in_steal_stack(game_name) < 3):
@@ -122,17 +184,13 @@ async def join_url(game_name: str):
     return {"cards_list" : cards_list}
 
 #hay que usar async?
-@app.get("cards/discard")
+@app.get("/cards/discard")
 async def discard_card(card_id):
     discard(card_id)
     return {"card Discarded"}
 
-@app.get("cards/discard2")
-async def discard_card(card_id):
-    discard(card_id)
-    return {"card Discarded"}
-
-@app.put("cards/proclaim")
+@app.put("/cards/proclaim")
 async def proclaim_card(card_id):
     proclaim(card_id)
     return {"card proclaimed"}
+
