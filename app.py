@@ -1,7 +1,9 @@
 from fastapi import FastAPI
-from user import *
-from loginfunctions import *
+from database.database import *
+from pydantic_models import *
+from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI(
     title="Secret Voldemort",
@@ -22,8 +24,12 @@ app.add_middleware(
 )
 
 # Register user
-@app.post("/signup",status_code=status.HTTP_200_OK)
+@app.post(
+    "/signup",
+    status_code=status.HTTP_200_OK
+)
 async def register_user(user_to_reg: UserTemp):
+
     if email_exists(user_to_reg.email):
         raise HTTPException(
             status_code=404,
@@ -56,6 +62,8 @@ async def read_users_me(current_user: User = Depends(get_current_active_user)):
 
 @app.post("/newgame")
 async def create_game(game: ConfigGame):
+    if not is_verified(game.email):
+        raise HTTPException(status_code=401, detail="No verified email ")
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
@@ -141,13 +149,13 @@ async def new_turn_begin(game_name: str):
         "players": list_player_dict
     }
 
-@app.put("/game/{game_name}/dir")
+@app.put("/game")
 async def dir_post(game_name: str, dir: int):
     turn_id = get_turn_by_gamename(game_name)
     set_post_dir(turn_id, dir)
     dir_dict = player_to_dict(dir)
-    return{"postulated_director": dir_dict,
-           "postulated minister": player_to_dict(get_post_min(turn_id))
+    return{"post_director": dir_dict,
+           "post_minister": player_to_dict(get_post_min(turn_id))
           }
 
 @app.put("/game/{game_name}/vote")
@@ -196,7 +204,6 @@ async def draw_cards(game_name: str):
         cards_list.append(card_to_dict(list_of_cards_id.pop()))
     return {"cards_list" : cards_list}
 
-#hay que usar async?
 @app.get("/cards/discard")
 async def discard_card(card_id: int):
     discard(card_id)
@@ -214,6 +221,13 @@ async def proclaim_card(card_id,game_name):
         "box": box_to_dict(box)
     }
 
+@app.post("/game/{game_name}/finished")
+async def finished_game(game_name: str, loyalty_win: str):
+    set_end_date(game_name)
+    finish_game_id = new_finished_game(game_name, loyalty_win)
+    new_players_finished(game_name ,finish_game_id)
+    return finished_game_to_dict(finish_game_id)
+
 @app.get("/postulated")
 async def get_two(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
@@ -225,3 +239,15 @@ async def get_two(game_name: str):
         "post_director": post_dir,
         "post_minister": post_min
     }
+
+@app.get("/game/is_started")
+async def is_started(game_name: str):
+    if not (game_name):
+         return False
+    game = get_game_by_name(game_name)
+    return (game.initial_date is not None)
+
+@app.post("/game/box")
+async def delete_boxs(game_name: str):
+    for b in get_game_by_name(game_name).box:
+        delete_box(b.id)

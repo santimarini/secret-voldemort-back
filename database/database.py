@@ -16,7 +16,8 @@ class User(db.Entity):
     photo = pony.orm.Optional(str)  # supongo que habria que guardar una url a la foto, no lo se
     verified = pony.orm.Required(bool)
     players = Set('Player')
-    finished_games = Set('Finishedgames')
+    finished_games = Set('FinishedGames')
+    player_finished = Set('PlayerFinished')
 
 #Players table
 class Player(db.Entity):
@@ -29,9 +30,22 @@ class Player(db.Entity):
     actualGame = Optional('Game')
 
 #Finished games table
-class Finishedgames(db.Entity):
-    gameinfo = Required(str) #solo para probar, porque falta definir que informacion queremos guardar de una partida
-    users = Set(User)
+class FinishedGames(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    game_name = Required(str)
+    initial_date = Required(datetime)
+    end_date = Required(datetime)
+    win = Required(str)
+    players_finished = Set('PlayerFinished')
+    users = Set('User')
+
+class PlayerFinished(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    username = Required(str)
+    loyalty = Required(str)
+    rol = Required(str)
+    finish_game = Required('FinishedGames')
+    user = Required('User')
 
 #Games table
 class Game(db.Entity):
@@ -41,7 +55,7 @@ class Game(db.Entity):
     end_date = Optional(datetime)
     max_players = Required(int)
     creator = Required(str)
-    players = Set(Player)
+    players = Set('Player')
     turn = Optional('Turn')
     proclamation = Set('Proclamation')
     box = Set('Box')
@@ -166,6 +180,10 @@ def is_user_in_game(email_address,game_name):
 @pony.orm.db_session
 def delete_player(player_id):
     Player[player_id].delete()
+
+@pony.orm.db_session
+def delete_box(box_id):
+    Box[box_id].delete()
 
 #return list of players in a specific game
 @pony.orm.db_session
@@ -480,3 +498,42 @@ def box_to_dict(box_id):
 @pony.orm.db_session
 def set_used_box(box_id):
     Box[box_id].is_used = True
+
+@pony.orm.db_session
+def set_end_date(game_name):
+    game = get_game_by_name(game_name)
+    game.end_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+@pony.orm.db_session
+def new_finished_game(game_name, loyalty_win):
+    game = get_game_by_name(game_name)
+    finish_game = FinishedGames(game_name=game_name, initial_date=game.initial_date,
+                                end_date=game.end_date, win=loyalty_win)
+    # Add id of user in finished_game
+    for u in game.players.user1:
+        finish_game.users.add(u)
+    return finish_game.id
+
+@pony.orm.db_session
+def new_players_finished(game_name, finished_game_id):
+    for p in get_player_list(game_name):
+        player_fg = PlayerFinished(username=p.username, loyalty="Fenix",
+                       rol="Hermione", finish_game=FinishedGames[finished_game_id],
+                       user=p.user1)
+        FinishedGames[finished_game_id].players_finished.add(player_fg)
+    return finished_game_to_list_of_players(finished_game_id)
+
+@pony.orm.db_session
+def finished_game_to_dict(finished_game_id):
+    finished_game = FinishedGames[finished_game_id]
+    dict_finish_game = dict(id=finished_game.id ,game_name=finished_game.game_name, initial_date=finished_game.initial_date,
+                            end_date=finished_game.end_date, win=finished_game.win,
+                            list_user = list(map(lambda u: u.id,finished_game.users)),
+                            list_player_finished = finished_game_to_list_of_players(finished_game_id))
+    return dict_finish_game
+
+@pony.orm.db_session
+def finished_game_to_list_of_players(finish_game_id):
+    finish_game = FinishedGames[finish_game_id]
+    list_players_fg = list(map(lambda p: (p.username, p.rol, p.loyalty), finish_game.players_finished))
+    return list_players_fg
