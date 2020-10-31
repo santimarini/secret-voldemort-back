@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from database.database import *
-from user import *
-from loginfunctions import *
+from pydantic_models import *
+from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -37,20 +37,28 @@ async def register_user(user_to_reg: UserTemp):
         )
     else:
         new_user(user_to_reg.username, user_to_reg.email,
-                 hash_password(user_to_reg.password), "photo")
+                 get_password_hash(user_to_reg.password), "photo")
         return {"email": user_to_reg.email}
 
 
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user_by_email(form_data.username)
-    if user is None:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    hashed_password = hash_password(form_data.password)
-    if not hashed_password == user.password:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    # return token to identify a specific user, it'll be the user's email for simplicity
-    return {"access_token": user.email_address, "token_type": "bearer"}
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email_address}, expires_delta=access_token_expires
+    )
+    return {"access_token": user.email_address, "token_type": "bearer"}  # deberia ir access_token
+
+@app.get("/users/me/")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return {current_user.email_address}
 
 @app.post("/newgame")
 async def create_game(game: ConfigGame):
@@ -93,11 +101,24 @@ async def join_url(game_name: str, email: str):
 
 @app.post("/start")
 async def start_game(game_name: str):
+    if num_of_players(game_name) < 5:
+        raise HTTPException(status_code=403, detail="There aren't enough players")
     set_game_started(game_name)
+    new_turn(game_name)
     new_deck(game_name)
     shuffle_cards(game_name)
-    new_turn(game_name)
-    #configuracion de tablero
+    new_templates(game_name)
+    np = num_of_players(game_name)
+    print(np)
+    if np == 5 or np == 6:
+        print("5 o 6 jugadores")
+        config_template_6players(game_name)
+    if np == 7 or np == 8:
+        print("7 o 8 jugadores")
+        config_template_8players(game_name)
+    if np == 9 or np == 10:
+        print("9 o 10 jugadores")
+        config_template_10players(game_name)
     #asignacion de roles
     #asignacion de lealtades
     return {
@@ -127,6 +148,15 @@ async def new_turn_begin(game_name: str):
         "minister": player_min,
         "players": list_player_dict
     }
+
+@app.put("/game")
+async def dir_post(game_name: str, dir: int):
+    turn_id = get_turn_by_gamename(game_name)
+    set_post_dir(turn_id, dir)
+    dir_dict = player_to_dict(dir)
+    return{"post_director": dir_dict,
+           "post_minister": player_to_dict(get_post_min(turn_id))
+          }
 
 @app.put("/game/{game_name}/vote")
 async def vote_player(game_name: str, vote: bool):
@@ -163,18 +193,9 @@ async def vote_player(game_name: str, vote: bool):
                "vote": vote,
                "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
               }
-
-@app.put("/game/{game_name}/dir")
-async def dir_post(game_name: str, dir: int):
-    turn_id = get_turn_by_gamename(game_name)
-    set_post_dir(turn_id, dir)
-    dir_dict = player_to_dict(dir)
-    return{"postulated_director": dir_dict,
-           "postulated minister": player_to_dict(get_post_min(turn_id))
-          }
   
 @app.get("/cards/draw")
-async def join_url(game_name: str):
+async def draw_cards(game_name: str):
     if(num_of_cards_in_steal_stack(game_name) < 3):
         shuffle_cards(game_name)
     list_of_cards_id = get_cards_in_game(game_name)
@@ -183,14 +204,52 @@ async def join_url(game_name: str):
         cards_list.append(card_to_dict(list_of_cards_id.pop()))
     return {"cards_list" : cards_list}
 
-#hay que usar async?
 @app.get("/cards/discard")
-async def discard_card(card_id):
+async def discard_card(card_id: int):
     discard(card_id)
-    return {"card Discarded"}
+    card = card_to_dict(card_id)
+    return {"Proclamation": card}
 
 @app.put("/cards/proclaim")
-async def proclaim_card(card_id):
+async def proclaim_card(card_id,game_name):
+    turn_id = get_turn_by_gamename(game_name)
+    marker_to_zero(turn_id)
     proclaim(card_id)
-    return {"card proclaimed"}
+    box = get_next_box(card_id,game_name)
+    set_used_box(box)
+    return {
+        "box": box_to_dict(box)
+    }
+
+@app.post("/game/{game_name}/finished")
+async def finished_game(game_name: str, loyalty_win: str):
+    set_end_date(game_name)
+    finish_game_id = new_finished_game(game_name, loyalty_win)
+    new_players_finished(game_name ,finish_game_id)
+    # delete
+    delete_all_box(game_name)
+    delete_all_proclamation(game_name)
+    delete_all_player(game_name)
+    delete_turn(game_name)
+    delete_game(game_name)
+    return finished_game_to_dict(finish_game_id)
+
+@app.get("/postulated")
+async def get_two(game_name: str):
+    turn_id = get_turn_by_gamename(game_name)
+    post_min_id = get_post_min(turn_id)
+    post_dir_id = get_post_dir(turn_id)
+    post_min = player_to_dict(post_min_id)
+    post_dir = player_to_dict(post_dir_id)
+    return {
+        "post_director": post_dir,
+        "post_minister": post_min
+    }
+
+@app.get("/game/is_started")
+async def is_started(game_name: str):
+    if not (game_name):
+         return False
+    game = get_game_by_name(game_name)
+    return (game.initial_date is not None)
 

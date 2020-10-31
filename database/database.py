@@ -16,7 +16,8 @@ class User(db.Entity):
     photo = pony.orm.Optional(str)  # supongo que habria que guardar una url a la foto, no lo se
     verified = pony.orm.Required(bool)
     players = Set('Player')
-    finished_games = Set('Finishedgames')
+    finished_games = Set('FinishedGames')
+    player_finished = Set('PlayerFinished')
 
 #Players table
 class Player(db.Entity):
@@ -29,9 +30,22 @@ class Player(db.Entity):
     actualGame = Optional('Game')
 
 #Finished games table
-class Finishedgames(db.Entity):
-    gameinfo = Required(str) #solo para probar, porque falta definir que informacion queremos guardar de una partida
-    users = Set(User)
+class FinishedGames(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    game_name = Required(str)
+    initial_date = Required(datetime)
+    end_date = Required(datetime)
+    win = Required(str)
+    players_finished = Set('PlayerFinished')
+    users = Set('User')
+
+class PlayerFinished(db.Entity):
+    id = PrimaryKey(int, auto=True)
+    username = Required(str)
+    loyalty = Required(str)
+    rol = Required(str)
+    finish_game = Required('FinishedGames')
+    user = Required('User')
 
 #Games table
 class Game(db.Entity):
@@ -41,15 +55,10 @@ class Game(db.Entity):
     end_date = Optional(datetime)
     max_players = Required(int)
     creator = Required(str)
-    players = Set(Player)
+    players = Set('Player')
     turn = Optional('Turn')
     proclamation = Set('Proclamation')
-
-class Proclamation(db.Entity):
-    loyalty = Required(str)
-    deck = Required(str)
-    position = Required(int)
-    actualGame = Optional(Game)
+    box = Set('Box')
 
 #Turns table
 class Turn(db.Entity):
@@ -64,6 +73,19 @@ class Turn(db.Entity):
     elect_dir = Optional(int)
     Pos_votes = Optional(int)
     Neg_votes = Optional(int)
+
+class Proclamation(db.Entity):
+    loyalty = Required(str)
+    deck = Required(str)
+    position = Required(int)
+    actualGame = Optional(Game)
+
+class Box(db.Entity):
+    loyalty = Required(str)
+    position = Required(int)
+    spell = Optional(str)
+    is_used = Required(bool)
+    actualGame = Optional(Game)
 
 db.generate_mapping(create_tables=True)
 
@@ -158,6 +180,29 @@ def is_user_in_game(email_address,game_name):
 @pony.orm.db_session
 def delete_player(player_id):
     Player[player_id].delete()
+
+@pony.orm.db_session
+def delete_all_player(game_name):
+    for player in get_game_by_name(game_name).players:
+        delete_player(player.id)
+
+@pony.orm.db_session
+def delete_all_box(game_name):
+    for b in get_game_by_name(game_name).box:
+        Box[b.id].delete()
+
+@pony.orm.db_session
+def delete_game(game_name):
+    get_game_by_name(game_name).delete()
+
+@pony.orm.db_session
+def delete_turn(game_name):
+    Turn[get_turn_by_gamename(game_name)].delete()
+
+@pony.orm.db_session
+def delete_all_proclamation(game_name):
+    for p in get_game_by_name(game_name).proclamation:
+        Proclamation[p.id].delete()
 
 #return list of players in a specific game
 @pony.orm.db_session
@@ -392,3 +437,122 @@ def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
     list_a = filter(lambda p: p.is_alive and turn.post_min != p.id,
                         get_player_list(game_name))
     return (list(list_a))
+
+@pony.orm.db_session
+def new_templates(game_name):
+    game = get_game_by_name(game_name)
+    for i in range(5):
+        box = Box(loyalty="Fenix Order", position=i+1, is_used=False)
+        game.box.add(box)
+    for i in range(6):
+        box = Box(loyalty="Death Eaters", position=i+1, is_used=False)
+        game.box.add(box)
+
+@pony.orm.db_session
+def get_template_death_e(game_name):
+    template_de = []
+    for i in get_game_by_name(game_name).box:
+        if i.loyalty == "Death Eaters":
+            template_de.append(i)
+    template_de.sort(key=lambda p: p.position)
+    return template_de
+
+@pony.orm.db_session
+def get_template_order_f(game_name):
+    template_de = []
+    for i in get_game_by_name(game_name).box:
+        if i.loyalty == "Fenix Order":
+            template_de.append(i)
+    template_de.sort(key=lambda p: p.position)
+    return template_de
+
+@pony.orm.db_session
+def config_template_6players(game_name):
+    template_de = get_template_death_e(game_name)
+    template_de[2].spell = "Guess"
+    template_de[3].spell = "Avada Kedavra"
+    template_de[4].spell = "Avada Kedavra"
+
+@pony.orm.db_session
+def config_template_8players(game_name):
+    template_de = get_template_death_e(game_name)
+    template_de[1].spell = "Cruciatus"
+    template_de[2].spell = "Imperius"
+    template_de[3].spell = "Avada Kedavra"
+    template_de[4].spell = "Avada Kedavra"
+
+@pony.orm.db_session
+def config_template_10players(game_name):
+    template_de = get_template_death_e(game_name)
+    template_de[0].spell = "Cruciatus"
+    template_de[1].spell = "Cruciatus"
+    template_de[2].spell = "Imperius"
+    template_de[3].spell = "Avada Kedavra"
+    template_de[4].spell = "Avada Kedavra"
+
+@pony.orm.db_session
+def get_next_box(card_id,game_name):
+    card = Proclamation[card_id]
+    if card.loyalty == "Fenix Order":
+        template = get_template_order_f(game_name)
+        for i in template:
+            if (not i.is_used):
+                box = i
+                break
+    else:
+        template = get_template_death_e(game_name)
+        for i in template:
+            if (not i.is_used):
+                box = i
+                break
+    return box.id
+
+@pony.orm.db_session
+def box_to_dict(box_id):
+    b = Box[box_id]
+    dict_b = dict(id = b.id, loyalty = b.loyalty, position = b.position,
+                  spell = b.spell, is_used = b.is_used, actualGame = b.actualGame.id)
+    return dict_b
+
+@pony.orm.db_session
+def set_used_box(box_id):
+    Box[box_id].is_used = True
+
+@pony.orm.db_session
+def set_end_date(game_name):
+    game = get_game_by_name(game_name)
+    game.end_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+@pony.orm.db_session
+def new_finished_game(game_name, loyalty_win):
+    game = get_game_by_name(game_name)
+    finish_game = FinishedGames(game_name=game_name, initial_date=game.initial_date,
+                                end_date=game.end_date, win=loyalty_win)
+    # Add id of user in finished_game
+    for u in game.players.user1:
+        finish_game.users.add(u)
+    return finish_game.id
+
+@pony.orm.db_session
+def new_players_finished(game_name, finished_game_id):
+    for p in get_player_list(game_name):
+        player_fg = PlayerFinished(username=p.username, loyalty="Fenix",
+                       rol="Hermione", finish_game=FinishedGames[finished_game_id],
+                       user=p.user1)
+        FinishedGames[finished_game_id].players_finished.add(player_fg)
+    return finished_game_to_list_of_players(finished_game_id)
+
+@pony.orm.db_session
+def finished_game_to_dict(finished_game_id):
+    finished_game = FinishedGames[finished_game_id]
+    dict_finish_game = dict(id=finished_game.id ,game_name=finished_game.game_name, initial_date=finished_game.initial_date,
+                            end_date=finished_game.end_date, win=finished_game.win,
+                            list_user = list(map(lambda u: u.id,finished_game.users)),
+                            list_player_finished = finished_game_to_list_of_players(finished_game_id))
+    return dict_finish_game
+
+@pony.orm.db_session
+def finished_game_to_list_of_players(finish_game_id):
+    finish_game = FinishedGames[finish_game_id]
+    list_players_fg = list(map(lambda p: (p.username, p.rol, p.loyalty), finish_game.players_finished))
+    return list_players_fg
