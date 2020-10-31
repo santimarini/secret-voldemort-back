@@ -182,8 +182,27 @@ def delete_player(player_id):
     Player[player_id].delete()
 
 @pony.orm.db_session
-def delete_box(box_id):
-    Box[box_id].delete()
+def delete_all_player(game_name):
+    for player in get_game_by_name(game_name).players:
+        delete_player(player.id)
+
+@pony.orm.db_session
+def delete_all_box(game_name):
+    for b in get_game_by_name(game_name).box:
+        Box[b.id].delete()
+
+@pony.orm.db_session
+def delete_game(game_name):
+    get_game_by_name(game_name).delete()
+
+@pony.orm.db_session
+def delete_turn(game_name):
+    Turn[get_turn_by_gamename(game_name)].delete()
+
+@pony.orm.db_session
+def delete_all_proclamation(game_name):
+    for p in get_game_by_name(game_name).proclamation:
+        Proclamation[p.id].delete()
 
 #return list of players in a specific game
 @pony.orm.db_session

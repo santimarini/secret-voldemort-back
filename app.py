@@ -226,6 +226,12 @@ async def finished_game(game_name: str, loyalty_win: str):
     set_end_date(game_name)
     finish_game_id = new_finished_game(game_name, loyalty_win)
     new_players_finished(game_name ,finish_game_id)
+    # delete
+    delete_all_box(game_name)
+    delete_all_proclamation(game_name)
+    delete_all_player(game_name)
+    delete_turn(game_name)
+    delete_game(game_name)
     return finished_game_to_dict(finish_game_id)
 
 @app.get("/postulated")
@@ -247,7 +253,3 @@ async def is_started(game_name: str):
     game = get_game_by_name(game_name)
     return (game.initial_date is not None)
 
-@app.post("/game/box")
-async def delete_boxs(game_name: str):
-    for b in get_game_by_name(game_name).box:
-        delete_box(b.id)
