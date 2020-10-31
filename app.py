@@ -23,6 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+PHASE = 0
+
 # Register user
 @app.post(
     "/signup",
@@ -54,7 +56,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     access_token = create_access_token(
         data={"sub": user.email_address}, expires_delta=access_token_expires
     )
-    return {"access_token": user.email_address, "token_type": "bearer"}  # deberia ir access_token
+    return {"access_token": access_token, "token_type": "bearer"}  # deberia ir access_token
 
 @app.get("/users/me/")
 async def read_users_me(current_user: User = Depends(get_current_active_user)):
@@ -104,20 +106,17 @@ async def start_game(game_name: str):
     if num_of_players(game_name) < 5:
         raise HTTPException(status_code=403, detail="There aren't enough players")
     set_game_started(game_name)
+    set_phase_game(game_name,1)
     new_turn(game_name)
     new_deck(game_name)
     shuffle_cards(game_name)
     new_templates(game_name)
     np = num_of_players(game_name)
-    print(np)
     if np == 5 or np == 6:
-        print("5 o 6 jugadores")
         config_template_6players(game_name)
     if np == 7 or np == 8:
-        print("7 o 8 jugadores")
         config_template_8players(game_name)
     if np == 9 or np == 10:
-        print("9 o 10 jugadores")
         config_template_10players(game_name)
     #asignacion de roles
     #asignacion de lealtades
@@ -151,6 +150,7 @@ async def new_turn_begin(game_name: str):
 
 @app.put("/game")
 async def dir_post(game_name: str, dir: int):
+    set_phase_game(game_name,2)
     turn_id = get_turn_by_gamename(game_name)
     set_post_dir(turn_id, dir)
     dir_dict = player_to_dict(dir)
@@ -169,6 +169,7 @@ async def vote_player(game_name: str, vote: bool):
     if num_of_players_alive(game_name) == get_total_votes(turn_id):
         # most positive votes
         if get_status_vote(turn_id):
+            set_phase_game(game_name,3)
             marker_to_zero(turn_id)
             set_elect_min(turn_id, get_post_min(turn_id))
             set_elect_dir(turn_id, get_post_dir(turn_id))
@@ -179,6 +180,7 @@ async def vote_player(game_name: str, vote: bool):
                     "elect_dir": player_to_dict(get_elect_dir(turn_id))}
             # most negative votes
         else:
+            set_phase_game(game_name,1)
             increment_marker(turn_id)
             set_elect_dir(turn_id, None)
             set_elect_min(turn_id, None)
@@ -216,6 +218,9 @@ async def proclaim_card(card_id,game_name):
     marker_to_zero(turn_id)
     proclaim(card_id)
     box = get_next_box(card_id,game_name)
+    if (Box[box].loyalty == "Fenix Order" and Box[box].position == 5) or \
+            (Box[box].loyalty == "Death Eaters" and Box[box].position == 6):
+        set_phase_game(game_name,4)
     set_used_box(box)
     return {
         "box": box_to_dict(box)
@@ -253,3 +258,6 @@ async def is_started(game_name: str):
     game = get_game_by_name(game_name)
     return (game.initial_date is not None)
 
+@app.get("/phase")
+async def get_phase(game_name):
+    return {"phase_game": get_phase_game(game_name)}

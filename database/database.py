@@ -55,6 +55,7 @@ class Game(db.Entity):
     end_date = Optional(datetime)
     max_players = Required(int)
     creator = Required(str)
+    phase = Required(int)
     players = Set('Player')
     turn = Optional('Turn')
     proclamation = Set('Proclamation')
@@ -116,7 +117,7 @@ def email_exists(email_address):
 @pony.orm.db_session
 def new_game(name,max_players,email):
     game1 = Game(name=name,creation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                 max_players=max_players, creator=email)
+                 max_players=max_players, creator=email, phase=0)
     return game1.name
 
 @pony.orm.db_session
@@ -131,6 +132,16 @@ def game_exists(name):
     return(Game.get(name=name) is not None)
 
 #<precondition: user exists>
+
+@pony.orm.db_session
+def set_phase_game(game_name, n):
+    game = get_game_by_name(game_name)
+    game.phase = n
+
+@pony.orm.db_session
+def get_phase_game(game_name):
+    game = get_game_by_name(game_name)
+    return game.phase
 
 @pony.orm.db_session
 def new_player(email_address):
