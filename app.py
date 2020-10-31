@@ -1,9 +1,7 @@
 from fastapi import FastAPI
-from database.database import *
 from user import *
 from loginfunctions import *
 from fastapi.middleware.cors import CORSMiddleware
-
 
 app = FastAPI(
     title="Secret Voldemort",
@@ -24,12 +22,8 @@ app.add_middleware(
 )
 
 # Register user
-@app.post(
-    "/signup",
-    status_code=status.HTTP_200_OK
-)
+@app.post("/signup",status_code=status.HTTP_200_OK)
 async def register_user(user_to_reg: UserTemp):
-
     if email_exists(user_to_reg.email):
         raise HTTPException(
             status_code=404,
@@ -37,25 +31,31 @@ async def register_user(user_to_reg: UserTemp):
         )
     else:
         new_user(user_to_reg.username, user_to_reg.email,
-                 hash_password(user_to_reg.password), "photo")
+                 get_password_hash(user_to_reg.password), "photo")
         return {"email": user_to_reg.email}
 
 
-@app.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
-    user = get_user_by_email(form_data.username)
-    if user is None:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    hashed_password = hash_password(form_data.password)
-    if not hashed_password == user.password:
-        raise HTTPException(status_code=400, detail="Incorrect username or password")
-    # return token to identify a specific user, it'll be the user's email for simplicity
-    return {"access_token": user.email_address, "token_type": "bearer"}
+@app.post("/token", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.email_address}, expires_delta=access_token_expires
+    )
+    return {"access_token": user.email_address, "token_type": "bearer"}  # deberia ir access_token
+
+@app.get("/users/me/")
+async def read_users_me(current_user: User = Depends(get_current_active_user)):
+    return {current_user.email_address}
 
 @app.post("/newgame")
 async def create_game(game: ConfigGame):
-    if not is_verified(game.email):
-        raise HTTPException(status_code=401, detail="No verified email ")
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     else:
