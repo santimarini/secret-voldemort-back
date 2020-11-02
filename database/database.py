@@ -526,6 +526,11 @@ def box_to_dict(box_id):
     return dict_b
 
 @pony.orm.db_session
+def get_box(box_id):
+    return (Box[box_id])
+    
+
+@pony.orm.db_session
 def set_used_box(box_id):
     Box[box_id].is_used = True
 
@@ -567,3 +572,10 @@ def finished_game_to_list_of_players(finish_game_id):
     finish_game = FinishedGames[finish_game_id]
     list_players_fg = list(map(lambda p: (p.username, p.rol, p.loyalty), finish_game.players_finished))
     return list_players_fg
+
+@pony.orm.db_session
+def get_user_email_by_id(player_id):
+    player_email = Player[player_id].user1.email_address
+    return player_email
+
+
