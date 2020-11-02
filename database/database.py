@@ -156,12 +156,6 @@ def get_game_by_name(name):
     g1 = Game.get(name=name)
     return(g1)
 
-#set the initial_date of a game when is started
-@pony.orm.db_session
-def set_game_started(game_name):
-    game = Game.get(name=game_name)
-    game.initial_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
 #<precondition: player and game exists>
 @pony.orm.db_session
 def join_game(player_id,game_name):
@@ -578,4 +572,15 @@ def get_user_email_by_id(player_id):
     player_email = Player[player_id].user1.email_address
     return player_email
 
+@pony.orm.db_session
+def end_game(game_name, loyalty):
+    set_end_date(game_name)
+    finish_game_id = new_finished_game(game_name, loyalty)
+    new_players_finished(game_name, finish_game_id)
+    delete_all_box(game_name)
+    delete_all_proclamation(game_name)
+    delete_all_player(game_name)
+    delete_turn(game_name)
+    delete_game(game_name)
+    return finish_game_id
 

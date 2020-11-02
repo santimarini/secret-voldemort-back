@@ -206,6 +206,13 @@ async def draw_cards_min(game_name: str):
         cards_list.append(card_to_dict(list_of_cards_id.pop()))
     return {"cards_list" : cards_list}
 
+@app.put("/cards/discard_min")
+async def discard_card_min(card_id: int, game_name: str):
+    set_phase_game(game_name,4)
+    discard(card_id)
+    card = card_to_dict(card_id)
+    return {"card": card}
+
 @app.get("/cards/draw_dir")
 async def draw_cards_dir(game_name: str):
     list_of_cards_id = get_cards_in_game(game_name)
@@ -213,13 +220,6 @@ async def draw_cards_dir(game_name: str):
     for c in range(2):
         cards_list.append(card_to_dict(list_of_cards_id.pop()))
     return {"cards_list" : cards_list}
-
-@app.put("/cards/discard_min")
-async def discard_card_min(card_id: int, game_name: str):
-    set_phase_game(game_name,4)
-    discard(card_id)
-    card = card_to_dict(card_id)
-    return {"card": card}
 
 @app.put("/cards/discard_dir")
 async def discard_card_dir(card_id: int):
@@ -234,29 +234,17 @@ async def proclaim_card(card_id,game_name):
     proclaim(card_id)
     box_id = get_next_box(card_id,game_name)
     box = get_box(box_id)
-    
     if (box.loyalty == "Fenix Order" and box.position == 5) or \
             (box.loyalty == "Death Eaters" and box.position == 6):
         set_phase_game(game_name, 5)
+        finish_game_id = end_game(game_name,box.loyalty)
+        return finished_game_to_dict(finish_game_id)
     else:
         set_phase_game(game_name, 1)
     set_used_box(box_id)
     return {
         "box": box_to_dict(box_id)
     }
-
-@app.post("/game/{game_name}/finished")
-async def finished_game(game_name: str, loyalty_win: str):
-    set_end_date(game_name)
-    finish_game_id = new_finished_game(game_name, loyalty_win)
-    new_players_finished(game_name ,finish_game_id)
-    # delete
-    delete_all_box(game_name)
-    delete_all_proclamation(game_name)
-    delete_all_player(game_name)
-    delete_turn(game_name)
-    delete_game(game_name)
-    return finished_game_to_dict(finish_game_id)
 
 @app.get("/postulated")
 async def get_two(game_name: str):
@@ -280,7 +268,11 @@ async def is_started(game_name: str):
 
 @app.get("/phase")
 async def get_phase(game_name):
-    return {"phase_game": get_phase_game(game_name)}
+    if get_game_by_name(game_name) is None:
+        return {"phase_game": 5}
+    else:
+        return {"phase_game": get_phase_game(game_name)}
+
 
 
 @app.get("/dirmin_elect")
