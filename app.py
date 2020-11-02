@@ -215,6 +215,8 @@ async def discard_card_min(card_id: int, game_name: str):
 
 @app.get("/cards/draw_dir")
 async def draw_cards_dir(game_name: str):
+    if (num_of_cards_in_steal_stack(game_name) < 2):
+        shuffle_cards(game_name)
     list_of_cards_id = get_cards_in_game(game_name)
     cards_list = []
     for c in range(2):
