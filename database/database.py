@@ -55,6 +55,7 @@ class Game(db.Entity):
     end_date = Optional(datetime)
     max_players = Required(int)
     creator = Required(str)
+    phase = Required(int)
     players = Set('Player')
     turn = Optional('Turn')
     proclamation = Set('Proclamation')
@@ -116,7 +117,7 @@ def email_exists(email_address):
 @pony.orm.db_session
 def new_game(name,max_players,email):
     game1 = Game(name=name,creation_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                 max_players=max_players, creator=email)
+                 max_players=max_players, creator=email, phase=0)
     return game1.name
 
 @pony.orm.db_session
@@ -133,6 +134,16 @@ def game_exists(name):
 #<precondition: user exists>
 
 @pony.orm.db_session
+def set_phase_game(game_name, n):
+    game = get_game_by_name(game_name)
+    game.phase = n
+
+@pony.orm.db_session
+def get_phase_game(game_name):
+    game = get_game_by_name(game_name)
+    return game.phase
+
+@pony.orm.db_session
 def new_player(email_address):
     user1 = get_user_by_email(email_address)
     player = Player(username=user1.name,is_alive=True,user1=user1)
@@ -144,12 +155,6 @@ def new_player(email_address):
 def get_game_by_name(name):
     g1 = Game.get(name=name)
     return(g1)
-
-#set the initial_date of a game when is started
-@pony.orm.db_session
-def set_game_started(game_name):
-    game = Game.get(name=game_name)
-    game.initial_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 #<precondition: player and game exists>
 @pony.orm.db_session
@@ -515,6 +520,11 @@ def box_to_dict(box_id):
     return dict_b
 
 @pony.orm.db_session
+def get_box(box_id):
+    return (Box[box_id])
+    
+
+@pony.orm.db_session
 def set_used_box(box_id):
     Box[box_id].is_used = True
 
@@ -556,3 +566,21 @@ def finished_game_to_list_of_players(finish_game_id):
     finish_game = FinishedGames[finish_game_id]
     list_players_fg = list(map(lambda p: (p.username, p.rol, p.loyalty), finish_game.players_finished))
     return list_players_fg
+
+@pony.orm.db_session
+def get_user_email_by_id(player_id):
+    player_email = Player[player_id].user1.email_address
+    return player_email
+
+@pony.orm.db_session
+def end_game(game_name, loyalty):
+    set_end_date(game_name)
+    finish_game_id = new_finished_game(game_name, loyalty)
+    new_players_finished(game_name, finish_game_id)
+    delete_all_box(game_name)
+    delete_all_proclamation(game_name)
+    delete_all_player(game_name)
+    delete_turn(game_name)
+    delete_game(game_name)
+    return finish_game_id
+
