@@ -60,6 +60,7 @@ class Game(db.Entity):
     end_date = Optional(datetime)
     max_players = Required(int)
     creator = Required(str)
+    phase = Required(int)
     players = Set('Player')
     turn = Optional('Turn')
     proclamation = Set('Proclamation')
@@ -94,6 +95,5 @@ class Box(db.Entity):
     spell = Optional(str)
     is_used = Required(bool)
     actualGame = Optional('Game')
-
 
 db.generate_mapping(create_tables=True)
