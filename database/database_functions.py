@@ -98,6 +98,18 @@ def set_end_date(game_name):
     game = get_game_by_name(game_name)
     game.end_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+@pony.orm.db_session
+def end_game(game_name, loyalty):
+    set_end_date(game_name)
+    finish_game_id = new_finished_game(game_name, loyalty)
+    new_players_finished(game_name, finish_game_id)
+    delete_all_box(game_name)
+    delete_all_proclamation(game_name)
+    delete_all_player(game_name)
+    delete_turn(game_name)
+    delete_game(game_name)
+    return finish_game_id
+
 
 @pony.orm.db_session
 def delete_game(game_name):
