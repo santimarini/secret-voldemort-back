@@ -17,12 +17,11 @@ class User(db.Entity):
     verified = pony.orm.Required(bool)
     players = Set('Player')
     finished_games = Set('FinishedGames')
-    player_finished = Set('PlayerFinished')
 
 #Players table
 class Player(db.Entity):
     id = PrimaryKey(int, auto=True)
-    username = Required(str)
+    alias = Required(str)
     is_alive = Required(bool)
     loyalty = Optional(str) #str solo para probar, aca va un ENUM (o podriamos poner un str?)
     rol = Optional(str) #str solo para probar, aca va un ENUM (o podriamos poner un str?)
@@ -36,16 +35,7 @@ class FinishedGames(db.Entity):
     initial_date = Required(datetime)
     end_date = Required(datetime)
     win = Required(str)
-    players_finished = Set('PlayerFinished')
     users = Set('User')
-
-class PlayerFinished(db.Entity):
-    id = PrimaryKey(int, auto=True)
-    username = Required(str)
-    loyalty = Required(str)
-    rol = Required(str)
-    finish_game = Required('FinishedGames')
-    user = Required('User')
 
 #Games table
 class Game(db.Entity):
@@ -146,7 +136,7 @@ def get_phase_game(game_name):
 @pony.orm.db_session
 def new_player(email_address):
     user1 = get_user_by_email(email_address)
-    player = Player(username=user1.name,is_alive=True,user1=user1)
+    player = Player(alias=user1.name,is_alive=True,user1=user1)
     commit()
     return player.id
 
@@ -305,7 +295,7 @@ def player_to_dict(player_id):
         return None
     else:
         p = Player[player_id]
-        dict_p = dict(id = p.id, username = p.username, is_alive = p.is_alive,
+        dict_p = dict(id = p.id, alias = p.alias, is_alive = p.is_alive,
                     loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
                     actualGame = p.actualGame.name)
         return dict_p
@@ -538,33 +528,23 @@ def new_finished_game(game_name, loyalty_win):
     game = get_game_by_name(game_name)
     finish_game = FinishedGames(game_name=game_name, initial_date=game.initial_date,
                                 end_date=game.end_date, win=loyalty_win)
-    # Add id of user in finished_game
-    for u in game.players.user1:
-        finish_game.users.add(u)
+    for p in game.players:
+        finish_game.users.add(p.user1)
     return finish_game.id
-
-@pony.orm.db_session
-def new_players_finished(game_name, finished_game_id):
-    for p in get_player_list(game_name):
-        player_fg = PlayerFinished(username=p.username, loyalty="Fenix",
-                       rol="Hermione", finish_game=FinishedGames[finished_game_id],
-                       user=p.user1)
-        FinishedGames[finished_game_id].players_finished.add(player_fg)
-    return finished_game_to_list_of_players(finished_game_id)
 
 @pony.orm.db_session
 def finished_game_to_dict(finished_game_id):
     finished_game = FinishedGames[finished_game_id]
     dict_finish_game = dict(id=finished_game.id ,game_name=finished_game.game_name, initial_date=finished_game.initial_date,
                             end_date=finished_game.end_date, win=finished_game.win,
-                            list_user = list(map(lambda u: u.id,finished_game.users)),
-                            list_player_finished = finished_game_to_list_of_players(finished_game_id))
+                            list_user = list(map(lambda u: u.email_address,finished_game.users)))
     return dict_finish_game
+
 
 @pony.orm.db_session
 def finished_game_to_list_of_players(finish_game_id):
     finish_game = FinishedGames[finish_game_id]
-    list_players_fg = list(map(lambda p: (p.username, p.rol, p.loyalty), finish_game.players_finished))
+    list_players_fg = list(map(lambda p: (p.alias, p.rol, p.loyalty), finish_game.players_finished))
     return list_players_fg
 
 @pony.orm.db_session
@@ -576,11 +556,8 @@ def get_user_email_by_id(player_id):
 def end_game(game_name, loyalty):
     set_end_date(game_name)
     finish_game_id = new_finished_game(game_name, loyalty)
-    new_players_finished(game_name, finish_game_id)
     delete_all_box(game_name)
     delete_all_proclamation(game_name)
     delete_all_player(game_name)
     delete_turn(game_name)
-    delete_game(game_name)
     return finish_game_id
-
