@@ -1,11 +1,10 @@
 from fastapi import FastAPI
 from database.database import *
-from pydantic_models import *
 from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
 
-MAX_LEN_FIELD = 12
-MIN_LEN_FIELD = 3
+MAX_LEN_FIELD = 16
+MIN_LEN_FIELD = 4
 MAX_LEN_EMAIL = 30
 MIN_NUM_OF_PLAYERS = 5
 MAX_NUM_OF_PLAYERS = 10
@@ -51,7 +50,41 @@ async def register_user(user_to_reg: UserTemp):
     else:
         new_user(user_to_reg.alias, user_to_reg.email,
                  get_password_hash(user_to_reg.password), "photo")
+        email = EmailSchema(email=[user_to_reg.email])
+        validate_token_expires = timedelta(minutes=VALIDATE_TOKEN_EXPIRE_MINUTES)
+        validate_token = create_token(
+            data={"sub": user_to_reg.email}, expires_delta=validate_token_expires
+        )
+        html = generate_html(user_to_reg.alias,validate_token)
+        message = get_message(email,html)
+        fm = FastMail(conf)
+        await fm.send_message(message)
         return {"email": user_to_reg.email}
+
+@app.get("/validate/{token}")
+async def validate_email(token:str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="BAD_TOKEN"
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="LINK_EXPIRES"
+        )
+    user = get_user_by_email(email)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="BAD_TOKEN"
+        )
+    else:
+        set_user_verified(email)
+    return {"Gracias por verificar tu email! email_user": email}
 
 
 @app.post("/token")
@@ -64,7 +97,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token = create_token(
         data={"sub": user.email_address}, expires_delta=access_token_expires
     )
     return {"alias": user.name, "photo": "photo",
@@ -90,7 +123,7 @@ async def create_game(game: ConfigGame,
         return {"name": game_name}
 
 
-@app.post("/game/{game_name}")
+@app.get("/game/{game_name}")
 async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
     if game_exists(game_name):
         if get_game_by_name(game_name).initial_date is not None:
@@ -205,7 +238,7 @@ async def vote_player(game_name: str, vote: bool):
                "vote": vote,
                "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
               }
-  
+
 @app.get("/cards/draw_three_cards")
 async def draw_three_cards(game_name: str):
     if(num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
@@ -290,5 +323,5 @@ async def get_min_dir_elect(game_name: str):
     email_min = get_user_email_by_id(elect_min_id)
     email_dir =  get_user_email_by_id(elect_dir_id)
 
-    return {"elect_min": email_min, 
+    return {"elect_min": email_min,
             "elect_dir": email_dir}
