@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from typing import List
 
 
 class UserTemp(BaseModel):
@@ -9,3 +10,6 @@ class UserTemp(BaseModel):
 class ConfigGame(BaseModel):
     name: str
     max_players: int
+
+class EmailSchema(BaseModel):
+    email: List[EmailStr]

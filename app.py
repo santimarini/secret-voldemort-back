@@ -1,11 +1,10 @@
 from fastapi import FastAPI
 from database.database import *
-from pydantic_models import *
 from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
 
-MAX_LEN_FIELD = 12
-MIN_LEN_FIELD = 3
+MAX_LEN_FIELD = 16
+MIN_LEN_FIELD = 4
 MAX_LEN_EMAIL = 30
 MIN_NUM_OF_PLAYERS = 5
 MAX_NUM_OF_PLAYERS = 10
@@ -20,7 +19,8 @@ app = FastAPI(
 )
 
 origins = [
-    "http://localhost:3000"
+    "http://localhost:3000",
+    "127.0.0.1:40116"
 ]
 
 app.add_middleware(
@@ -51,7 +51,41 @@ async def register_user(user_to_reg: UserTemp):
     else:
         new_user(user_to_reg.alias, user_to_reg.email,
                  get_password_hash(user_to_reg.password), "photo")
+        email = EmailSchema(email=[user_to_reg.email])
+        validate_token_expires = timedelta(minutes=VALIDATE_TOKEN_EXPIRE_MINUTES)
+        validate_token = create_token(
+            data={"sub": user_to_reg.email}, expires_delta=validate_token_expires
+        )
+        html = generate_html(user_to_reg.alias,validate_token)
+        message = get_message(email,html)
+        fm = FastMail(conf)
+        await fm.send_message(message)
         return {"email": user_to_reg.email}
+
+@app.get("/validate/{token}")
+async def validate_email(token:str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="BAD_TOKEN"
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="LINK_EXPIRES"
+        )
+    user = get_user_by_email(email)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="BAD_TOKEN"
+        )
+    else:
+        set_user_verified(email)
+    return {"Gracias por verificar tu email! email_user": email}
 
 
 @app.post("/token")
@@ -64,7 +98,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token = create_token(
         data={"sub": user.email_address}, expires_delta=access_token_expires
     )
     return {"alias": user.name, "photo": "photo",

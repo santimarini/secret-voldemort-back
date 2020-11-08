@@ -86,7 +86,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password, photo):
     User(name=name, email_address=email_address, password=password,
-         photo=photo, verified=True)
+         photo=photo, verified=False)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -561,3 +561,8 @@ def end_game(game_name, loyalty):
     delete_all_player(game_name)
     delete_turn(game_name)
     return finish_game_id
+
+@pony.orm.db_session
+def set_user_verified(user_email):
+    user = get_user_by_email(user_email)
+    user.verified = True
