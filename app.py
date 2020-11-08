@@ -19,8 +19,7 @@ app = FastAPI(
 )
 
 origins = [
-    "http://localhost:3000",
-    "127.0.0.1:40116"
+    "http://localhost:3000"
 ]
 
 app.add_middleware(
@@ -124,7 +123,7 @@ async def create_game(game: ConfigGame,
         return {"name": game_name}
 
 
-@app.post("/game/{game_name}")
+@app.get("/game/{game_name}")
 async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
     if game_exists(game_name):
         if get_game_by_name(game_name).initial_date is not None:
@@ -239,7 +238,7 @@ async def vote_player(game_name: str, vote: bool):
                "vote": vote,
                "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
               }
-  
+
 @app.get("/cards/draw_three_cards")
 async def draw_three_cards(game_name: str):
     if(num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
@@ -324,5 +323,5 @@ async def get_min_dir_elect(game_name: str):
     email_min = get_user_email_by_id(elect_min_id)
     email_dir =  get_user_email_by_id(elect_dir_id)
 
-    return {"elect_min": email_min, 
+    return {"elect_min": email_min,
             "elect_dir": email_dir}

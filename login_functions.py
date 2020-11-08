@@ -4,7 +4,6 @@ from database.database import *
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from pydantic_models import *
-from typing import Optional
 from datetime import date, datetime, timedelta
 from starlette.requests import Request
 from fastapi_mail import FastMail, MessageSchema,ConnectionConfig
@@ -18,22 +17,6 @@ VALIDATE_TOKEN_EXPIRE_MINUTES = 120
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-class Token(BaseModel):
-    access_token: str
-    token_type: str
-
-
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-
-class User(BaseModel):
-    username: str
-    email: Optional[str] = None
-
-class UserInDB(User):
-    hashed_password: str
 
 conf = ConnectionConfig(
     MAIL_USERNAME = "secretvoldemort.game@gmail.com",
@@ -58,12 +41,12 @@ def get_message(email: EmailSchema, html):
 
 def generate_html(user: str,validate_token:str):
     html = """
-    <html> 
+    <html>
     <body>
     <p>Hi! """ + user + """ Thanks for register in secret-voldemort.com
     <br>Please follow the next link to verified account and play!
-    <br>http://localhost:8000/validate/""" + validate_token +"""</p> 
-    </body> 
+    <br>http://localhost:8000/validate/""" + validate_token +"""</p>
+    </body>
     </html>
     """
     return html
@@ -115,4 +98,3 @@ async def get_current_verified_user(current_user: User = Depends(get_current_use
     if not current_user.verified:
         raise HTTPException(status_code=400, detail="Email no validated")
     return current_user
-
