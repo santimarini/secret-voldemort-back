@@ -115,6 +115,11 @@ def set_game_started(game_name):
     game = Game.get(name=game_name)
     game.initial_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+@pony.orm.db_session
+def game_is_not_started(game_name):
+    game = Game.get(name=game_name)
+    return (game.initial_date is None)
+
 
 #verify if certain game exists
 @pony.orm.db_session
@@ -139,6 +144,14 @@ def new_player(email_address):
     player = Player(alias=user1.name,is_alive=True,user1=user1)
     commit()
     return player.id
+
+@pony.orm.db_session
+def player_doesnt_exists(player_id):
+    try:
+        Player[player_id]
+        return False
+    except:
+        return True
 
 #given a name, returns the associate game
 @pony.orm.db_session
@@ -265,6 +278,13 @@ def get_card_in_the_steal_stack(id_card):
 def discard(id_card):
     card = Proclamation[id_card]
     card.deck = "Discarded"
+
+def card_doesnt_exist(card_id):
+    try:
+        Proclamation[card_id]
+        return False
+    except:
+        return True
 
 #set a Proclamation as "Proclaimed" ie this card will be in the corresponding board
 @pony.orm.db_session
