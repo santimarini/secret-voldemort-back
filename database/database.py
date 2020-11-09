@@ -86,7 +86,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password, photo):
     User(name=name, email_address=email_address, password=password,
-         photo=photo, verified=False)
+         photo=photo, verified=True)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -566,3 +566,82 @@ def end_game(game_name, loyalty):
 def set_user_verified(user_email):
     user = get_user_by_email(user_email)
     user.verified = True
+
+list_roles_death_eaters = ["Voldemort", "Bellatrix", "Draco", "Dolores Umbridge"]
+list_roles_fenix_order = ["Harry Potter", "Hermione", "Ronald", "Dumbledore", "Sirius Black", "Hagrid"]
+
+@pony.orm.db_session
+def assign_roles_6players(game_name):
+    player_list = get_player_list(game_name)
+    random.shuffle(player_list)
+    number_players = num_of_players(game_name)
+    for i in range(2):
+        player_list[i].loyalty = "Death Eaters"
+        player_list[i].rol = list_roles_death_eaters[i]
+    if number_players == 5:
+        for i in range(3):
+            player_list[i+2].loyalty = "Fenix Order"
+            player_list[i+2].rol = list_roles_fenix_order[i]
+    else:
+        for i in range(4):
+            player_list[i+2].loyalty = "Fenix Order"
+            player_list[i+2].rol = list_roles_fenix_order[i]
+
+@pony.orm.db_session
+def assign_roles_8players(game_name):
+    player_list = get_player_list(game_name)
+    random.shuffle(player_list)
+    number_players = num_of_players(game_name)
+    for i in range(3):
+        player_list[i].loyalty = "Death Eaters"
+        player_list[i].rol = list_roles_death_eaters[i]
+    if number_players == 7:
+        for i in range(4):
+            player_list[i+3].loyalty = "Fenix Order"
+            player_list[i+3].rol = list_roles_fenix_order[i]
+    else:
+        for i in range(5):
+            player_list[i+3].loyalty = "Fenix Order"
+            player_list[i+3].rol = list_roles_fenix_order[i]
+
+@pony.orm.db_session
+def assign_roles_10players(game_name):
+    player_list = get_player_list(game_name)
+    random.shuffle(player_list)
+    number_players = num_of_players(game_name)
+    for i in range(4):
+        player_list[i].loyalty = "Death Eaters"
+        player_list[i].rol = list_roles_death_eaters[i]
+    if number_players == 9:
+        for i in range(5):
+            player_list[i+4].loyalty = "Fenix Order"
+            player_list[i+4].rol = list_roles_fenix_order[i]
+    else:
+        for i in range(6):
+            player_list[i+4].loyalty = "Fenix Order"
+            player_list[i+4].rol = list_roles_fenix_order[i]
+
+@pony.orm.db_session
+def config_boards(game_name, n_players):
+    if n_players == 5 or n_players == 6:
+        config_template_6players(game_name)
+    if n_players == 7 or n_players == 8:
+        config_template_8players(game_name)
+    if n_players == 9 or n_players == 10:
+        config_template_10players(game_name)
+
+@pony.orm.db_session
+def assing_loyalty_and_rol(game_name, n_players):
+    if n_players == 5 or n_players == 6:
+        assign_roles_6players(game_name)
+    if n_players == 7 or n_players == 8:
+        assign_roles_8players(game_name)
+    if n_players == 9 or n_players == 10:
+        assign_roles_10players(game_name)
+
+@pony.orm.db_session
+def game_to_dict(game):
+    dict_g = dict(id=game.id, name=game.name, actually_players=num_of_players(game.name),
+                  max_players=game.max_players
+                  )
+    return dict_g

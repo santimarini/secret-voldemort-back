@@ -113,7 +113,8 @@ async def validate_email(token:str):
 
 
 @app.post("/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm =
+                                 Depends()):
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
@@ -135,24 +136,31 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 @app.post("/newgame")
 async def create_game(game: ConfigGame,
                       current_user: User = Depends(get_current_verified_user)):
-    if game.max_players < MIN_NUM_OF_PLAYERS or game.max_players > MAX_NUM_OF_PLAYERS:
+    if game.max_players < MIN_NUM_OF_PLAYERS or \
+       game.max_players > MAX_NUM_OF_PLAYERS:
         raise HTTPException(status_code=401,
-                            detail="the number of players must be between 5 and 10"
+                            detail="the number of players "
+                                   "must be between 5 and 10"
                             )
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
     if len(game.name) < MIN_LEN_FIELD or len(game.name) > MAX_LEN_FIELD:
         HTTPException(status_code=404,detail="field size is invalid")
     else:
-        game_name = new_game(game.name, game.max_players, current_user.email_address)
+        game_name = new_game(game.name,
+                             game.max_players,
+                             current_user.email_address)
         return {"name": game_name}
 
 
 @app.get("/game/{game_name}")
-async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
+async def join_url(game_name: str, current_user: User =
+                    Depends(get_current_verified_user)):
     if game_exists(game_name):
         if get_game_by_name(game_name).initial_date is not None:
-            raise HTTPException(status_code=404, detail="The game has already started")
+            raise HTTPException(status_code=404,
+                                detail="The game has already started"
+                                )
         else:
             game = get_game_by_name(game_name)
             if not is_user_in_game(current_user.email_address, game_name):
@@ -163,37 +171,47 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
                     list_dict = []
                     for p in list:
                         list_dict.append(player_to_dict(p.id))
-                    return {"alias": get_user_by_email(current_user.email_address).name,
+                    user_alias = get_user_by_email(
+                        current_user.email_address).name
+                    return {"alias": user_alias,
                             "game_name": game_name,
                             "max_players": game.max_players,
                             "players": list_dict,
                             "creator": game.creator}
                 else:
-                    raise HTTPException(status_code=404, detail="The room is full")
+                    raise HTTPException(status_code=404,
+                                        detail="The room is full"
+                                        )
             else:
-                raise HTTPException(status_code=300, detail="Player already in the game")
+                raise HTTPException(status_code=300,
+                                    detail="Player already in the game"
+                                    )
     else:
-        raise HTTPException(status_code=404, detail="Game is not exists")
+        raise HTTPException(status_code=404,
+                            detail="Game is not exists"
+                            )
 
 @app.post("/start")
 async def start_game(game_name: str):
     if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
-        raise HTTPException(status_code=403, detail="There aren't enough players")
+        raise HTTPException(status_code=403,
+                            detail="There aren't enough players"
+                            )
     set_game_started(game_name)
     set_phase_game(game_name,1)
     new_turn(game_name)
     new_deck(game_name)
     shuffle_cards(game_name)
     new_templates(game_name)
-    np = num_of_players(game_name)
-    if np == 5 or np == 6:
-        config_template_6players(game_name)
-    if np == 7 or np == 8:
-        config_template_8players(game_name)
-    if np == 9 or np == 10:
-        config_template_10players(game_name)
+    number_players = num_of_players(game_name)
+    config_boards(game_name, number_players)
+    assing_loyalty_and_rol(game_name, number_players)
+    player_list = get_player_list(game_name)
+    player_dict = []
+    for p in player_list:
+        player_dict.append(player_to_dict(p.id))
     return {
-        "game started!"
+        "players": player_dict
     }
 
 @app.post("/next_turn")
@@ -205,12 +223,14 @@ async def new_turn_begin(game_name: str):
     set_post_min(turn_id, next_id_min)
     player_min = player_to_dict(next_id_min)
     if num_of_players_alive(game_name) > MIN_NUM_OF_PLAYERS:
-        list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
+        list_player = \
+            get_players_avaibles_to_elect_more_5players(game_name,turn_id)
         list_player_dict = []
         for p in list_player:
             list_player_dict.append(player_to_dict(p.id))
     else:
-        list_player = get_players_avaibles_to_elect_less_5players(game_name,turn_id)
+        list_player = \
+            get_players_avaibles_to_elect_less_5players(game_name,turn_id)
         list_player_dict = []
         for p in list_player:
             list_player_dict.append(player_to_dict(p.id))
@@ -261,7 +281,8 @@ async def vote_player(game_name: str, vote: bool):
     else:
         return{"cant_vote": get_total_votes(turn_id),
                "vote": vote,
-               "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
+               "vote_less": (num_of_players_alive(game_name) -
+                             get_total_votes(turn_id))
               }
 
 @app.get("/cards/draw_three_cards")
@@ -303,8 +324,10 @@ async def proclaim_card(card_id,game_name):
     box_id = get_next_box(card_id,game_name)
     box = get_box(box_id)
     set_used_box(box_id)
-    if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
-            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
+    if (box.loyalty == "Fenix Order" and
+        box.position == MAX_BOX_FENIX_ORDER) \
+        or (box.loyalty == "Death Eaters"
+        and box.position == MAX_BOX_DEATH_EATERS):
         set_phase_game(game_name, 5)
         finish_game_id = end_game(game_name,box.loyalty)
         return finished_game_to_dict(finish_game_id)
@@ -327,13 +350,6 @@ async def get_two(game_name: str):
     }
 
 
-@app.get("/game/is_started")
-async def is_started(game_name: str):
-    if not (game_name):
-         return False
-    game = get_game_by_name(game_name)
-    return (game.initial_date is not None)
-
 @app.get("/phase")
 async def get_phase(game_name):
     return {"phase_game": get_phase_game(game_name)}
@@ -345,8 +361,7 @@ async def get_min_dir_elect(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
     elect_min_id = get_elect_min(turn_id)
     elect_dir_id = get_elect_dir(turn_id)
-    email_min = get_user_email_by_id(elect_min_id)
-    email_dir =  get_user_email_by_id(elect_dir_id)
-
-    return {"elect_min": email_min,
-            "elect_dir": email_dir}
+    player_min = player_to_dict(elect_min_id)
+    player_dir = player_to_dict(elect_dir_id)
+    return {"elect_min": player_min,
+            "elect_dir": player_dir}
