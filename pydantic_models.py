@@ -4,7 +4,7 @@ from typing import List, Optional
 
 class UserTemp(BaseModel):
     alias: str
-    email: str
+    email: EmailStr
     password: str
 
 
