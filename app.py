@@ -3,9 +3,12 @@ from database.database import *
 from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
 
-MAX_LEN_FIELD = 16
-MIN_LEN_FIELD = 4
+MAX_LEN_ALIAS = 16
+MIN_LEN_ALIAS = 3
+MAX_LEN_PASSWORD = 16
+MIN_LEN_PASSWORD = 4
 MAX_LEN_EMAIL = 30
+MIN_LEN_EMAIL = 8
 MIN_NUM_OF_PLAYERS = 5
 MAX_NUM_OF_PLAYERS = 10
 MIN_CARDS_IN_STACK = 3
@@ -36,11 +39,12 @@ async def register_user(user_to_reg: UserTemp):
             status_code=404,
             detail="field size is invalid"
         )
-    if len(user_to_reg.alias) > MAX_LEN_FIELD or \
-       len(user_to_reg.alias) < MIN_LEN_FIELD or \
-       len(user_to_reg.password) > MAX_LEN_FIELD or \
-       len(user_to_reg.password) < MIN_LEN_FIELD or \
-       len(user_to_reg.email) > MAX_LEN_EMAIL:
+    if len(user_to_reg.alias) > MAX_LEN_ALIAS or \
+       len(user_to_reg.alias) < MIN_LEN_ALIAS or \
+       len(user_to_reg.password) > MAX_LEN_PASSWORD or \
+       len(user_to_reg.password) < MIN_LEN_PASSWORD or \
+       len(user_to_reg.email) > MAX_LEN_EMAIL or \
+       len(user_to_reg.email) < MIN_LEN_EMAIL:
         raise invalid_fields
     if email_exists(user_to_reg.email):
         raise HTTPException(
@@ -50,16 +54,37 @@ async def register_user(user_to_reg: UserTemp):
     else:
         new_user(user_to_reg.alias, user_to_reg.email,
                  get_password_hash(user_to_reg.password), "photo")
-        email = EmailSchema(email=[user_to_reg.email])
-        validate_token_expires = timedelta(minutes=VALIDATE_TOKEN_EXPIRE_MINUTES)
-        validate_token = create_token(
-            data={"sub": user_to_reg.email}, expires_delta=validate_token_expires
-        )
-        html = generate_html(user_to_reg.alias,validate_token)
-        message = get_message(email,html)
-        fm = FastMail(conf)
-        await fm.send_message(message)
         return {"email": user_to_reg.email}
+
+@app.post("/send_email")
+async def send_email(user_email: str):
+    user = get_user_by_email(user_email)
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="The email was not found in our system"
+        )
+    else:
+        if user.verified:
+            raise HTTPException(
+                status_code=404,
+                detail="This email is already verified"
+            )
+        else:
+            email = EmailSchema(email=[user_email])
+            validate_token_expires = \
+                timedelta(minutes=VALIDATE_TOKEN_EXPIRE_MINUTES)
+            validate_token = create_token(
+                data={"sub": user_email},
+                expires_delta=validate_token_expires
+            )
+            alias = user.name
+            html = generate_html(alias, validate_token)
+            message = get_message(email, html)
+            fm = FastMail(conf)
+            await fm.send_message(message)
+            return {"Mail sent! Check your inbox. "
+                    "If you don't find it, check your spam folder"}
 
 @app.get("/validate/{token}")
 async def validate_email(token:str):
@@ -84,7 +109,7 @@ async def validate_email(token:str):
         )
     else:
         set_user_verified(email)
-    return {"Gracias por verificar tu email! email_user": email}
+    return {"Thanks for checking your email! email_user": email}
 
 
 @app.post("/token")
