@@ -43,7 +43,12 @@ async def register_user(user_to_reg: UserTemp):
        len(user_to_reg.password) < MIN_LEN_FIELD or \
        len(user_to_reg.email) > MAX_LEN_EMAIL:
         raise invalid_fields
-    if email_exists(user_to_reg.email):
+    if valid_email(user_to_reg.email):
+        raise HTTPException(
+            status_code=404,
+            detail="email invalid"
+        )
+    elif email_exists(user_to_reg.email):
         raise HTTPException(
             status_code=404,
             detail="existing user"
@@ -119,6 +124,8 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
 
 @app.post("/start")
 async def start_game(game_name: str):
+    if  get_game_by_name(game_name) is None:
+        raise HTTPException(status_code=404, detail="The game is not exist")
     if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
         raise HTTPException(status_code=403, detail="There aren't enough players")
     set_game_started(game_name)
@@ -230,12 +237,16 @@ async def draw_three_cards(game_name: str):
         return {"cards_list" : cards_list}
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
+        
 @app.put("/cards/discard_min")
 async def discard_card_min(card_id: int, game_name: str):
-    set_phase_game(game_name,4)
-    discard(card_id)
-    card = card_to_dict(card_id)
-    return {"card": card}
+    if card_id in get_cards_in_game(game_name):
+        set_phase_game(game_name,4)
+        discard(card_id)
+        card = card_to_dict(card_id)
+        return {"card": card}
+    else:
+        raise HTTPException(status_code=404, detail="card not available")
 
 @app.get("/cards/draw_two_cards")
 async def draw_two_cards(game_name: str):
@@ -251,11 +262,14 @@ async def draw_two_cards(game_name: str):
         raise HTTPException(status_code=400,detail="inexistent game")
 
 @app.put("/cards/discard_dir")
-async def discard_card_dir(card_id: int):
-    discard(card_id)
-    card = card_to_dict(card_id)
-    return {"card": card}
-
+async def discard_card_dir(card_id: int, game_name: str):
+    if card_id in get_cards_in_game(game_name):
+        discard(card_id)
+        card = card_to_dict(card_id)
+        return {"card": card}
+    else:
+        raise HTTPException(status_code=404, detail="card not available")
+        
 @app.put("/cards/proclaim")
 async def proclaim_card(card_id,game_name):
     if game_exists(game_name):

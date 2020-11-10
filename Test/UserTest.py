@@ -1,5 +1,6 @@
 import unittest
 import requests
+import json
 
 
 class UserTest(unittest.TestCase):
@@ -11,26 +12,27 @@ class UserTest(unittest.TestCase):
     def test_new_user(self):
         response = requests.post(self.api + self.register,
                                  data = '{ "alias": "user_one", "email": "user_one@gmail.com", "password": "123456" }')
-        self.assertEqual(200, response.status_code)
+        rest_json = json.loads(response.text)
+        self.assertEqual({'email': 'user_one@gmail.com'},rest_json)
 
-    def test_short_name(self):
+    def test_short_alias(self):
         response = requests.post(self.api + self.register,
                                  data='{ "alias": "us", "email": "usr@gmail.com", "password": "123456"}')
         self.assertEqual(404, response.status_code)
 
-    def test_great_name(self):
+    def test_great_alias(self):
         response = requests.post(self.api + self.register,
-                                 data='{ "alias": "aaaaaaaaaaaaa", "email": "user_two@gmail.com", "password": "123456"}')
+                                 data='{ "alias": "aaaaaaaaaaaaaaaaa", "email": "user_two@gmail.com", "password": "123456"}')
         self.assertEqual(404, response.status_code)
 
     def test_great_password(self):
         response = requests.post(self.api + self.register,
-                                 data='{ "alias": "user_three", "email": "user_three@gmail.com", "password": "1234567891234"}')
+                                 data='{ "alias": "user_three", "email": "user_three@gmail.com", "password": "12345678912345678"}')
         self.assertEqual(404, response.status_code)
 
     def test_less_password(self):
         response = requests.post(self.api + self.register,
-                                 data='{ "alias": "user_four", "email": "user_four@gmail.com", "password": "12"}')
+                                 data='{ "alias": "user_four", "email": "user_four@gmail.com", "password": "123"}')
         self.assertEqual(404, response.status_code)
 
     def test_great_email(self):
@@ -40,7 +42,7 @@ class UserTest(unittest.TestCase):
 
     def test_invalid_email(self):
         response = requests.post(self.api + self.register,
-                                 data='{ "alis": "user_six", "email": "user_six", "password": "123456" }')
+                                 data='{ "alias": "user_six", "email": "user_six", "password": "123456" }')
         self.assertEqual(404, response.status_code)
 
     # TEST LOGIN ENDPOINT
@@ -50,7 +52,7 @@ class UserTest(unittest.TestCase):
                       data='{"alias": "user_seven", "email": "user_seven@gmail.com", "password": "123456"}')
         # Login user
         response = requests.post(self.api + self.login,
-                                 data='{"username": "user_seven@gmail.com", "password": "123456"}')
+                                 params={"username": "user_seven@gmail.com", "password": "123456"})
         self.assertEqual(200, response.status_code)
         
     

@@ -581,3 +581,11 @@ def end_game(game_name, loyalty):
     delete_all_player(game_name)
     delete_turn(game_name)
     return finish_game_id
+    
+@pony.orm.db_session
+def is_card_discard(card_id):
+    card = Proclamation[card_id]
+    if card.deck == "Discarded":
+        return True
+    else:
+        return False

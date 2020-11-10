@@ -1,12 +1,9 @@
 import sys
 import os
-sys.path.insert(1, '/home/valentin/secvold/secret-voldemort-back/database')
-try:
-    os.remove('/home/valentin/secvold/secret-voldemort-back/database/database.sqlite')
-except OSError:
-    pass
-from database import *
 
+sys.path.insert(1, '/home/joaquin/Desktop/test/Test/database')
+
+from database import *
 
 new_user('user1', 'emailaddress1@gmail.com', 'password', 'photo')
 new_user('user2', 'emailaddress2@gmail.com', 'password', 'photo')
@@ -55,3 +52,94 @@ join_game(pp3, game_name_not_started)
 join_game(pp4, game_name_not_started)
 join_game(pp5, game_name_not_started)
 new_turn(game_name_not_started)
+
+player_id_1= new_player('emailaddress1@gmail.com')
+player_id_2= new_player('emailaddress2@gmail.com')
+player_id_3= new_player('emailaddress3@gmail.com')
+player_id_4= new_player('emailaddress4@gmail.com')
+player_id_5= new_player('emailaddress5@gmail.com')
+
+# GameTest
+new_game('game_name_test',5,'emailaddress1@gmail.com')
+new_game('game_test_start',5,'emailaddress1@gmail.com')
+join_game(player_id_1,'game_test_start')
+join_game(player_id_2,'game_test_start')
+join_game(player_id_3,'game_test_start')
+join_game(player_id_4,'game_test_start')
+join_game(player_id_5,'game_test_start')
+
+#GameInitTest
+new_game('game_init_test',5,'emailaddress1@gmail.com')
+player_id_11= new_player('emailaddress1@gmail.com')
+player_id_21= new_player('emailaddress2@gmail.com')
+player_id_31= new_player('emailaddress3@gmail.com')
+player_id_41= new_player('emailaddress4@gmail.com')
+player_id_51= new_player('emailaddress5@gmail.com')
+join_game(player_id_11,'game_init_test')
+join_game(player_id_21,'game_init_test')
+join_game(player_id_31,'game_init_test')
+join_game(player_id_41,'game_init_test')
+join_game(player_id_51,'game_init_test')
+
+new_game('game_init_test_2',5,'emailaddress1@gmail.com')
+player_id_12= new_player('emailaddress1@gmail.com')
+player_id_22= new_player('emailaddress2@gmail.com')
+player_id_32= new_player('emailaddress3@gmail.com')
+player_id_42= new_player('emailaddress4@gmail.com')
+player_id_52= new_player('emailaddress5@gmail.com')
+join_game(player_id_12,'game_init_test_2')
+join_game(player_id_22,'game_init_test_2')
+join_game(player_id_32,'game_init_test_2')
+join_game(player_id_42,'game_init_test_2')
+join_game(player_id_52,'game_init_test_2')
+
+new_game('game_init_test_3',5,'emailaddress1@gmail.com')
+player_id_13= new_player('emailaddress1@gmail.com')
+player_id_23= new_player('emailaddress2@gmail.com')
+player_id_33= new_player('emailaddress3@gmail.com')
+player_id_43= new_player('emailaddress4@gmail.com')
+player_id_53= new_player('emailaddress5@gmail.com')
+join_game(player_id_13,'game_init_test_3')
+join_game(player_id_23,'game_init_test_3')
+join_game(player_id_33,'game_init_test_3')
+join_game(player_id_43,'game_init_test_3')
+join_game(player_id_53,'game_init_test_3')
+
+new_game('game_init_test_4',5,'emailaddress1@gmail.com')
+player_id_14= new_player('emailaddress1@gmail.com')
+player_id_24= new_player('emailaddress2@gmail.com')
+player_id_34= new_player('emailaddress3@gmail.com')
+player_id_44= new_player('emailaddress4@gmail.com')
+player_id_54= new_player('emailaddress5@gmail.com')
+join_game(player_id_14,'game_init_test_4')
+join_game(player_id_24,'game_init_test_4')
+join_game(player_id_34,'game_init_test_4')
+join_game(player_id_44,'game_init_test_4')
+join_game(player_id_54,'game_init_test_4')
+
+new_game('game_init_test_5',5,'emailaddress1@gmail.com')
+player_id_15= new_player('emailaddress1@gmail.com')
+player_id_25= new_player('emailaddress2@gmail.com')
+player_id_35= new_player('emailaddress3@gmail.com')
+player_id_45= new_player('emailaddress4@gmail.com')
+player_id_55= new_player('emailaddress5@gmail.com')
+join_game(player_id_15,'game_init_test_5')
+join_game(player_id_25,'game_init_test_5')
+join_game(player_id_35,'game_init_test_5')
+join_game(player_id_45,'game_init_test_5')
+join_game(player_id_55,'game_init_test_5')
+
+new_game('game_init_test_6',5,'emailaddress1@gmail.com')
+player_id_16= new_player('emailaddress1@gmail.com')
+player_id_26= new_player('emailaddress2@gmail.com')
+player_id_36= new_player('emailaddress3@gmail.com')
+player_id_46= new_player('emailaddress4@gmail.com')
+player_id_56= new_player('emailaddress5@gmail.com')
+join_game(player_id_16,'game_init_test_6')
+join_game(player_id_26,'game_init_test_6')
+join_game(player_id_36,'game_init_test_6')
+join_game(player_id_46,'game_init_test_6')
+join_game(player_id_56,'game_init_test_6')
+
+
+
