@@ -1,12 +1,16 @@
 from fastapi import FastAPI
 from database.database import *
-from pydantic_models import *
 from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
 
-MAX_LEN_FIELD = 12
-MIN_LEN_FIELD = 3
+MAX_LEN_ALIAS = 16
+MIN_LEN_ALIAS = 3
+MAX_LEN_PASSWORD = 16
+MIN_LEN_PASSWORD = 4
 MAX_LEN_EMAIL = 30
+MIN_LEN_EMAIL = 8
+MAX_LEN_GAME_NAME = 
+MIN_LEN_GAME_NAME = 
 MIN_NUM_OF_PLAYERS = 5
 MAX_NUM_OF_PLAYERS = 10
 MIN_CARDS_IN_STACK = 3
@@ -37,11 +41,12 @@ async def register_user(user_to_reg: UserTemp):
             status_code=404,
             detail="field size is invalid"
         )
-    if len(user_to_reg.alias) > MAX_LEN_FIELD or \
-       len(user_to_reg.alias) < MIN_LEN_FIELD or \
-       len(user_to_reg.password) > MAX_LEN_FIELD or \
-       len(user_to_reg.password) < MIN_LEN_FIELD or \
-       len(user_to_reg.email) > MAX_LEN_EMAIL:
+    if len(user_to_reg.alias) > MAX_LEN_ALIAS or \
+       len(user_to_reg.alias) < MIN_LEN_ALIAS or \
+       len(user_to_reg.password) > MAX_LEN_PASSWORD or \
+       len(user_to_reg.password) < MIN_LEN_PASSWORD or \
+       len(user_to_reg.email) > MAX_LEN_EMAIL or \
+       len(user_to_reg.email) < MIN_LEN_EMAIL:
         raise invalid_fields
     if valid_email(user_to_reg.email):
         raise HTTPException(
@@ -58,18 +63,74 @@ async def register_user(user_to_reg: UserTemp):
                  get_password_hash(user_to_reg.password), "photo")
         return {"email": user_to_reg.email}
 
+@app.post("/send_email")
+async def send_email(user_email: str):
+    user = get_user_by_email(user_email)
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="The email was not found in our system"
+        )
+    else:
+        if user.verified:
+            raise HTTPException(
+                status_code=404,
+                detail="This email is already verified"
+            )
+        else:
+            email = EmailSchema(email=[user_email])
+            validate_token_expires = \
+                timedelta(minutes=VALIDATE_TOKEN_EXPIRE_MINUTES)
+            validate_token = create_token(
+                data={"sub": user_email},
+                expires_delta=validate_token_expires
+            )
+            alias = user.name
+            html = generate_html(alias, validate_token)
+            message = get_message(email, html)
+            fm = FastMail(conf)
+            await fm.send_message(message)
+            return {"Mail sent! Check your inbox. "
+                    "If you don't find it, check your spam folder"}
+
+@app.get("/validate/{token}")
+async def validate_email(token:str):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email: str = payload.get("sub")
+        if email is None:
+            raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="BAD_TOKEN"
+        )
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="LINK_EXPIRES"
+        )
+    user = get_user_by_email(email)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="BAD_TOKEN"
+        )
+    else:
+        set_user_verified(email)
+    return {"Thanks for checking your email! email_user": email}
+
 
 @app.post("/token")
-async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm =
+                                 Depends()):
     user = authenticate_user(form_data.username, form_data.password)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="Incorrect alias or password",
+            detail="Incorrect email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(
+    access_token = create_token(
         data={"sub": user.email_address}, expires_delta=access_token_expires
     )
     return {"alias": user.name, "photo": "photo",
@@ -82,24 +143,32 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 @app.post("/newgame")
 async def create_game(game: ConfigGame,
                       current_user: User = Depends(get_current_verified_user)):
-    if game.max_players < MIN_NUM_OF_PLAYERS or game.max_players > MAX_NUM_OF_PLAYERS:
+    if game.max_players < MIN_NUM_OF_PLAYERS or \
+       game.max_players > MAX_NUM_OF_PLAYERS:
         raise HTTPException(status_code=401,
-                            detail="the number of players must be between 5 and 10"
+                            detail="the number of players "
+                                   "must be between 5 and 10"
                             )
     if game_exists(game.name):
         raise HTTPException(status_code=401, detail="Game already exists")
-    if len(game.name) < MIN_LEN_FIELD or len(game.name) > MAX_LEN_FIELD:
+    if len(game.name) < MIN_LEN_GAME_NAME or len(game.name) > MAX_LEN_GAME_NAME:
         HTTPException(status_code=404,detail="field size is invalid")
     else:
-        game_name = new_game(game.name, game.max_players, current_user.email_address)
+        game_name = new_game(game.name,
+                             game.max_players,
+                             current_user.email_address)
         return {"name": game_name}
 
 
-@app.put("/game/{game_name}")
-async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
+
+@app.get("/game/{game_name}")
+async def join_url(game_name: str, current_user: User =
+                    Depends(get_current_verified_user)):
     if game_exists(game_name):
         if get_game_by_name(game_name).initial_date is not None:
-            raise HTTPException(status_code=404, detail="The game has already started")
+            raise HTTPException(status_code=404,
+                                detail="The game has already started"
+                                )
         else:
             game = get_game_by_name(game_name)
             if not is_user_in_game(current_user.email_address, game_name):
@@ -110,43 +179,53 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
                     list_dict = []
                     for p in list:
                         list_dict.append(player_to_dict(p.id))
-                    return {"alias": get_user_by_email(current_user.email_address).name,
+                    user_alias = get_user_by_email(
+                        current_user.email_address).name
+                    return {"alias": user_alias,
                             "game_name": game_name,
                             "max_players": game.max_players,
                             "players": list_dict,
                             "creator": game.creator}
                 else:
-                    raise HTTPException(status_code=404, detail="The room is full")
+                    raise HTTPException(status_code=404,
+                                        detail="The room is full"
+                                        )
             else:
-                raise HTTPException(status_code=300, detail="Player already in the game")
+                raise HTTPException(status_code=300,
+                                    detail="Player already in the game"
+                                    )
     else:
-        raise HTTPException(status_code=404, detail="Game is not exists")
+        raise HTTPException(status_code=404,
+                            detail="Game is not exists"
+                            )
 
 @app.post("/start")
 async def start_game(game_name: str):
     if  get_game_by_name(game_name) is None:
         raise HTTPException(status_code=404, detail="The game is not exist")
     if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
-        raise HTTPException(status_code=403, detail="There aren't enough players")
+        raise HTTPException(status_code=403,
+                            detail="There aren't enough players"
+                            )
     set_game_started(game_name)
     set_phase_game(game_name,1)
     new_turn(game_name)
     new_deck(game_name)
     shuffle_cards(game_name)
     new_templates(game_name)
-    np = num_of_players(game_name)
-    if np == 5 or np == 6:
-        config_template_6players(game_name)
-    if np == 7 or np == 8:
-        config_template_8players(game_name)
-    if np == 9 or np == 10:
-        config_template_10players(game_name)
+    number_players = num_of_players(game_name)
+    config_boards(game_name, number_players)
+    assing_loyalty_and_rol(game_name, number_players)
+    player_list = get_player_list(game_name)
+    player_dict = []
+    for p in player_list:
+        player_dict.append(player_to_dict(p.id))
     return {
-        "game started!"
+        "players": player_dict
     }
 
 @app.post("/next_turn")
-async def new_turn_begin(game_name: str):
+async def next_turn_begin(game_name: str):
     if game_exists(game_name):
         if game_is_not_started:
             raise HTTPException(status_code=400, detail="game is not started")
@@ -220,9 +299,10 @@ async def vote_player(game_name: str, vote: bool):
     else:
         return{"cant_vote": get_total_votes(turn_id),
                "vote": vote,
-               "vote_less": (num_of_players_alive(game_name) - get_total_votes(turn_id))
+               "vote_less": (num_of_players_alive(game_name) -
+                             get_total_votes(turn_id))
               }
-  
+
 @app.get("/cards/draw_three_cards")
 async def draw_three_cards(game_name: str):
     if game_exists(game_name):
@@ -309,14 +389,6 @@ async def get_two(game_name: str):
     }
 
 
-@app.get("/game/is_started")
-async def is_started(game_name: str):
-    if game_exists(game_name):
-        return (not game_is_not_started(game_name))
-    else:
-        raise HTTPException(status_code=400, detail="inexistent game")
-
-
 @app.get("/phase")
 async def get_phase(game_name):
     return {"phase_game": get_phase_game(game_name)}
@@ -326,12 +398,15 @@ async def get_phase(game_name):
 @app.get("/dirmin_elect")
 async def get_min_dir_elect(game_name: str):
     if game_exists(game_name):
+        if game_is_not_started:
+            raise HTTPException(status_code=400, detail="game is not started")
         turn_id = get_turn_by_gamename(game_name)
         elect_min_id = get_elect_min(turn_id)
         elect_dir_id = get_elect_dir(turn_id)
-        email_min = get_user_email_by_id(elect_min_id)
-        email_dir =  get_user_email_by_id(elect_dir_id)
-        return {"elect_min": email_min,
-                "elect_dir": email_dir}
+        player_min = player_to_dict(elect_min_id)
+        player_dir = player_to_dict(elect_dir_id)
+        return {"elect_min": player_min,
+                "elect_dir": player_dir}
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
+
