@@ -9,8 +9,8 @@ MAX_LEN_PASSWORD = 16
 MIN_LEN_PASSWORD = 4
 MAX_LEN_EMAIL = 30
 MIN_LEN_EMAIL = 8
-MAX_LEN_GAME_NAME = 
-MIN_LEN_GAME_NAME = 
+MAX_LEN_GAME_NAME =  10
+MIN_LEN_GAME_NAME = 3
 MIN_NUM_OF_PLAYERS = 5
 MAX_NUM_OF_PLAYERS = 10
 MIN_CARDS_IN_STACK = 3
@@ -48,11 +48,6 @@ async def register_user(user_to_reg: UserTemp):
        len(user_to_reg.email) > MAX_LEN_EMAIL or \
        len(user_to_reg.email) < MIN_LEN_EMAIL:
         raise invalid_fields
-    if valid_email(user_to_reg.email):
-        raise HTTPException(
-            status_code=404,
-            detail="email invalid"
-        )
     elif email_exists(user_to_reg.email):
         raise HTTPException(
             status_code=404,
@@ -227,7 +222,7 @@ async def start_game(game_name: str):
 @app.post("/next_turn")
 async def next_turn_begin(game_name: str):
     if game_exists(game_name):
-        if game_is_not_started:
+        if game_is_not_started(game_name):
             raise HTTPException(status_code=400, detail="game is not started")
         turn_id = get_turn_by_gamename(game_name)
         next_turn(turn_id)
@@ -355,8 +350,10 @@ async def proclaim_card(card_id,game_name):
     if game_exists(game_name):
         if card_doesnt_exist(card_id):
             raise HTTPException(status_code=400,detail="inexistent card")
-        if game_is_not_started:
+        if game_is_not_started(game_name):
             raise HTTPException(status_code=400, detail="game is not started")
+        if (not card_belong_to_game(card_id,game_name)):
+            raise HTTPException(status_code=400, detail="card doesnt belong to game")
         turn_id = get_turn_by_gamename(game_name)
         marker_to_zero(turn_id)
         proclaim(card_id)
@@ -398,7 +395,7 @@ async def get_phase(game_name):
 @app.get("/dirmin_elect")
 async def get_min_dir_elect(game_name: str):
     if game_exists(game_name):
-        if game_is_not_started:
+        if game_is_not_started(game_name):
             raise HTTPException(status_code=400, detail="game is not started")
         turn_id = get_turn_by_gamename(game_name)
         elect_min_id = get_elect_min(turn_id)

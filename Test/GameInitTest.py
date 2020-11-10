@@ -4,9 +4,9 @@ import json
 import sys
 import os
 
-sys.path.insert(1, '/home/agusten/Pavilion/UNC/3erAño/IngenieriaDelSoftware/SecretVoldemort/test_prueba/database')
+sys.path.insert(1, '/home/joaquin/secret-voldemort-back/database')
 try:
-    os.remove('/home/agusten/Pavilion/UNC/3erAño/IngenieriaDelSoftware/SecretVoldemort/test_prueba/database/database.sqlite')
+    os.remove('/home/joaquin/secret-voldemort-back/database/database.sqlite')
 except OSError:
     pass
 from database import *

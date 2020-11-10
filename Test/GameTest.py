@@ -62,20 +62,6 @@ class GameTest(unittest.TestCase):
         print(response.url)
         self.assertEqual(400, response.status_code)
 
-    def test_is_started_ok(self):
-        game_name = {"game_name": "game_name"}
-        response = requests.get(self.api + self.is_started,
-                                params=game_name)
-        print(response.url)
-        self.assertEqual(200,response.status_code)
-
-    def test_is_started_inexistent_game(self):
-        game_name = {"game_name": "asdasd"}
-        response = requests.get(self.api + self.is_started,
-                                params=game_name)
-        print(response.url)
-        self.assertEqual(400, response.status_code)
-
     def test_obtain_elect_min_and_dir_ok(self):
         game_name = {"game_name": "game_name"}
         response = requests.get(self.api + self.min_and_dir,

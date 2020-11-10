@@ -1,5 +1,6 @@
 import unittest
 import requests
+import json
 
 class CardsTest(unittest.TestCase):
     localhost = 'http://localhost:8000'
@@ -32,7 +33,10 @@ class CardsTest(unittest.TestCase):
         self.assertEqual(400,response.status_code)
 
     def test_proclaim_card_ok(self):
-        parameters = {"game_name": "game_name", "card_id" : 1}
+        response = requests.get(self.localhost + '/cards/draw_three_cards', params={"game_name": "game_name"})
+        resp_cards = json.loads(response.text)
+        id_to_proclam = resp_cards["cards_list"][1]["id"]
+        parameters = {"game_name": "game_name", "card_id": id_to_proclam}
         response = requests.put(self.localhost + self.proclaim,
                                 params=parameters)
         self.assertEqual(200,response.status_code)

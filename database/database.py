@@ -86,7 +86,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password, photo):
     User(name=name, email_address=email_address, password=password,
-         photo=photo, verified=True)
+         photo=photo, verified=False)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -267,6 +267,16 @@ def get_cards_in_game(game_name):
         cards_id.append(i.id)
     return cards_id
 
+@pony.orm.db_session
+def get_card_by_id(card_id):
+    return Proclamation[card_id]
+
+@pony.orm.db_session
+def card_belong_to_game(card_id,game_name):
+    game = get_game_by_name(game_name)
+    card = get_card_by_id(card_id)
+    return (card in game.proclamation)
+
 #return a object Proclamation by id, this function must be call in the legislative session and
 #when guess speel has invoke
 @pony.orm.db_session
@@ -279,6 +289,7 @@ def discard(id_card):
     card = Proclamation[id_card]
     card.deck = "Discarded"
 
+@pony.orm.db_session
 def card_doesnt_exist(card_id):
     try:
         Proclamation[card_id]
