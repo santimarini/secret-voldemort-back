@@ -103,6 +103,11 @@ def is_verified(email_address):
 def email_exists(email_address):
     return(User.get(email_address=email_address) is not None)
 
+# replace the old password with a new one
+@pony.orm.db_session
+def update_password(new_password, user_id):
+    User[user_id].password = new_password
+
 #creates a new game
 @pony.orm.db_session
 def new_game(name,max_players,email):
