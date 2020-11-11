@@ -684,3 +684,13 @@ def game_to_dict(game):
                   )
     return dict_g
 
+@pony.orm.db_session
+def update_player_alive(player_id):
+    Player[player_id].is_alive = False
+
+
+@pony.orm.db_session
+def player_belong_to_game(player_id,game_name):
+    game = get_game_by_name(game_name)
+    player = Player[player_id]
+    return (player in game.players)
