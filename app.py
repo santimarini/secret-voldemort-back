@@ -135,6 +135,47 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm =
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return {current_user.email_address}
 
+
+@app.post("/change_password")
+async def change_password(old_password: str,
+                          new_password: str,
+                          confirm_new_password: str,
+                          current_user: User = Depends(get_current_user)):
+    if not is_verified(current_user.email_address):
+        raise HTTPException(
+            status_code=404,
+            detail="user not verified"
+        )
+    if old_password == new_password:
+        raise HTTPException(
+            status_code=404,
+            detail="the old password is the same as the new password"
+        )
+    if (not new_password == confirm_new_password):
+        raise HTTPException(
+            status_code=404,
+            detail="passwords do not match"
+        )
+    invalid_fields = HTTPException(
+        status_code=404,
+        detail="field size is invalid"
+    )
+    if len(new_password) > MAX_LEN_PASSWORD or \
+       len(new_password) < MIN_LEN_PASSWORD or \
+       len(confirm_new_password) > MAX_LEN_PASSWORD or \
+       len(confirm_new_password) < MIN_LEN_PASSWORD:
+        raise invalid_fields
+    else:
+        user = authenticate_user(current_user.email_address, old_password)
+        if user == False:
+            raise HTTPException(
+                status_code=404,
+                detail="the old password is not the current password"
+            )
+        update_password(get_password_hash(new_password),user.id)
+        return{"changed password"}
+
+
 @app.post("/newgame")
 async def create_game(game: ConfigGame,
                       current_user: User = Depends(get_current_verified_user)):
@@ -153,7 +194,6 @@ async def create_game(game: ConfigGame,
                              game.max_players,
                              current_user.email_address)
         return {"name": game_name}
-
 
 
 @app.get("/game/{game_name}")
