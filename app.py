@@ -407,3 +407,9 @@ async def get_min_dir_elect(game_name: str):
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
 
+@app.post("/change_profile")
+async def change_profile(current_user: User = Depends(get_current_user),
+                        nickname: Optional[str] = None):
+    if nickname is not None:
+        update_username(current_user.email_address, nickname)
+    return {"new_username": get_user_by_email(current_user.email_address).name}

@@ -84,9 +84,9 @@ db.generate_mapping(create_tables=True)
 
 #Creates a new user
 @pony.orm.db_session
-def new_user(name, email_address, password, photo):
+def new_user(name, email_address, password):
     User(name=name, email_address=email_address, password=password,
-         photo=photo, verified=False)
+         photo="", verified=False)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -102,6 +102,11 @@ def is_verified(email_address):
 @pony.orm.db_session
 def email_exists(email_address):
     return(User.get(email_address=email_address) is not None)
+
+@pony.orm.db_session
+def update_username(email, nickname):
+    user = get_user_by_email(email)
+    user.name = nickname
 
 #creates a new game
 @pony.orm.db_session
