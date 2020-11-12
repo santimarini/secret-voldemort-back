@@ -684,8 +684,15 @@ def assing_loyalty_and_rol(game_name, n_players):
 
 @pony.orm.db_session
 def game_to_dict(game):
-    dict_g = dict(id=game.id, name=game.name, actually_players=num_of_players(game.name),
+    dict_g = dict(id=game.id, name=game.name, players=num_of_players(game.name),
                   max_players=game.max_players
                   )
     return dict_g
 
+@pony.orm.db_session
+def get_games():
+    list_game = Game.select(lambda g: g.initial_date is None)[:]
+    dict_g = []
+    for g in list(filter(lambda g: g.max_players > num_of_players(g.name), list_game)):
+        dict_g.append(game_to_dict(g))
+    return dict_g

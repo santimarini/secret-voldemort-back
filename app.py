@@ -447,3 +447,7 @@ async def get_min_dir_elect(game_name: str):
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
 
+@app.get("/show_games")
+async def game_list():
+    games = get_games()
+    return {"games_list": games}
