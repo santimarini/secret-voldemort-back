@@ -414,19 +414,24 @@ async def proclaim_card(card_id,game_name):
         raise HTTPException(status_code=400,detail="inexistent game")
 
 @app.get("/avada_kedavra")
-async def avada_kedavra(game_name: str, dir: int):
-    if (not player_belong_to_game(dir,game_name)):
+async def avada_kedavra(game_name: str, victim: int):
+    if (not game_exists(game_name)):
         raise HTTPException(status_code=400,
-                            detail="player doesnt belong to game"
-                            )
-    player_dict = player_to_dict(dir)
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=400, 
+                            detail="game is not started")
+    if (not player_belong_to_game(victim,game_name)):
+        raise HTTPException(status_code=400,
+                            detail="player doesnt belong to game")
+    player_dict = player_to_dict(victim)
     if not player_dict.is_alive:
         raise HTTPException(status_code=401,
                             detail="This player already death")
-    update_player_alive(dir)
+    update_player_alive(victim)
     if player_dict.rol == "Voldemort":
         set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, box.loyalty)
+        finish_game_id = end_game(game_name, "Fenix Order")
         return finished_game_to_dict(finish_game_id)
     else:
         return {"player_murdered": player_dict}
