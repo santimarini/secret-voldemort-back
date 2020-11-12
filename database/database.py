@@ -84,9 +84,9 @@ db.generate_mapping(create_tables=True)
 
 #Creates a new user
 @pony.orm.db_session
-def new_user(name, email_address, password, photo):
+def new_user(name, email_address, password):
     User(name=name, email_address=email_address, password=password,
-         photo=photo, verified=False)
+         photo="", verified=False)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -103,10 +103,18 @@ def is_verified(email_address):
 def email_exists(email_address):
     return(User.get(email_address=email_address) is not None)
 
+
+@pony.orm.db_session
+def update_username(email, nickname):
+    user = get_user_by_email(email)
+    user.name = nickname
+
+    
 # replace the old password with a new one
 @pony.orm.db_session
 def update_password(new_password, user_id):
     User[user_id].password = new_password
+
 
 #creates a new game
 @pony.orm.db_session
@@ -688,6 +696,12 @@ def game_to_dict(game):
                   max_players=game.max_players
                   )
     return dict_g
+
+@pony.orm.db_session
+def update_photo(user_email, binary_file):
+    user = get_user_by_email(user_email)
+    user.photo = binary_file
+    commit()
 
 @pony.orm.db_session
 def update_player_alive(player_id):
