@@ -103,10 +103,18 @@ def is_verified(email_address):
 def email_exists(email_address):
     return(User.get(email_address=email_address) is not None)
 
+
 @pony.orm.db_session
 def update_username(email, nickname):
     user = get_user_by_email(email)
     user.name = nickname
+
+    
+# replace the old password with a new one
+@pony.orm.db_session
+def update_password(new_password, user_id):
+    User[user_id].password = new_password
+
 
 #creates a new game
 @pony.orm.db_session
@@ -684,7 +692,7 @@ def assing_loyalty_and_rol(game_name, n_players):
 
 @pony.orm.db_session
 def game_to_dict(game):
-    dict_g = dict(id=game.id, name=game.name, actually_players=num_of_players(game.name),
+    dict_g = dict(id=game.id, name=game.name, players=num_of_players(game.name),
                   max_players=game.max_players
                   )
     return dict_g
@@ -694,3 +702,23 @@ def update_photo(user_email, binary_file):
     user = get_user_by_email(user_email)
     user.photo = binary_file
     commit()
+
+@pony.orm.db_session
+def update_player_alive(player_id):
+    Player[player_id].is_alive = False
+
+
+@pony.orm.db_session
+def player_belong_to_game(player_id,game_name):
+    game = get_game_by_name(game_name)
+    player = Player[player_id]
+    return (player in game.players)
+
+@pony.orm.db_session
+def get_games():
+    list_game = Game.select(lambda g: g.initial_date is None)[:]
+    dict_g = []
+    for g in list(filter(lambda g: g.max_players > num_of_players(g.name), list_game)):
+        dict_g.append(game_to_dict(g))
+    return dict_g
+

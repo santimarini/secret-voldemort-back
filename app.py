@@ -139,6 +139,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm =
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return {current_user.email_address}
 
+
 @app.get("/user_image")
 async def get_user_image(current_user: User = Depends(get_current_user)):
     return FileResponse(DIRRECTORY_USER_IMAGES + current_user.photo)
@@ -163,6 +164,47 @@ async def create_upload_file(file: UploadFile = File(...),
     user = get_user_by_email(current_user.email_address)
     return FileResponse(DIRRECTORY_USER_IMAGES + user.photo)
 
+
+@app.post("/change_password")
+async def change_password(old_password: str,
+                          new_password: str,
+                          confirm_new_password: str,
+                          current_user: User = Depends(get_current_user)):
+    if not is_verified(current_user.email_address):
+        raise HTTPException(
+            status_code=404,
+            detail="user not verified"
+        )
+    if old_password == new_password:
+        raise HTTPException(
+            status_code=404,
+            detail="the old password is the same as the new password"
+        )
+    if (not new_password == confirm_new_password):
+        raise HTTPException(
+            status_code=404,
+            detail="passwords do not match"
+        )
+    invalid_fields = HTTPException(
+        status_code=404,
+        detail="field size is invalid"
+    )
+    if len(new_password) > MAX_LEN_PASSWORD or \
+       len(new_password) < MIN_LEN_PASSWORD or \
+       len(confirm_new_password) > MAX_LEN_PASSWORD or \
+       len(confirm_new_password) < MIN_LEN_PASSWORD:
+        raise invalid_fields
+    else:
+        user = authenticate_user(current_user.email_address, old_password)
+        if user == False:
+            raise HTTPException(
+                status_code=404,
+                detail="the old password is not the current password"
+            )
+        update_password(get_password_hash(new_password),user.id)
+        return{"changed password"}
+
+
 @app.post("/newgame")
 async def create_game(game: ConfigGame,
                       current_user: User = Depends(get_current_verified_user)):
@@ -181,7 +223,6 @@ async def create_game(game: ConfigGame,
                              game.max_players,
                              current_user.email_address)
         return {"name": game_name}
-
 
 
 @app.get("/game/{game_name}")
@@ -401,6 +442,29 @@ async def proclaim_card(card_id,game_name):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
+@app.get("/avada_kedavra")
+async def avada_kedavra(game_name: str, victim: int):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=400,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=400, 
+                            detail="game is not started")
+    if (not player_belong_to_game(victim,game_name)):
+        raise HTTPException(status_code=400,
+                            detail="player doesnt belong to game")
+    player_dict = player_to_dict(victim)
+    if not player_dict.is_alive:
+        raise HTTPException(status_code=401,
+                            detail="This player already death")
+    update_player_alive(victim)
+    if player_dict.rol == "Voldemort":
+        set_phase_game(game_name, 5)
+        finish_game_id = end_game(game_name, "Fenix Order")
+        return finished_game_to_dict(finish_game_id)
+    else:
+        return {"player_murdered": player_dict}
+
 @app.get("/postulated")
 async def get_two(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
@@ -448,9 +512,17 @@ async def get_min_dir_elect(game_name: str):
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
 
+
 @app.post("/change_alias")
 async def change_alias(current_user: User = Depends(get_current_user),
                         nickname: Optional[str] = None):
     if nickname is not None:
         update_username(current_user.email_address, nickname)
     return {"new_username": get_user_by_email(current_user.email_address).name}
+
+  
+@app.get("/show_games")
+async def game_list():
+    games = get_games()
+    return {"games_list": games}
+
