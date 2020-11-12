@@ -689,3 +689,8 @@ def game_to_dict(game):
                   )
     return dict_g
 
+@pony.orm.db_session
+def update_photo(user_email, binary_file):
+    user = get_user_by_email(user_email)
+    user.photo = binary_file
+    commit()

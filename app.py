@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from database.database import *
 from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 
 MAX_LEN_ALIAS = 16
 MIN_LEN_ALIAS = 3
@@ -16,6 +17,9 @@ MAX_NUM_OF_PLAYERS = 10
 MIN_CARDS_IN_STACK = 3
 MAX_BOX_FENIX_ORDER = 5
 MAX_BOX_DEATH_EATERS = 6
+MAX_SIZE_FILE = 4000000
+
+DIRRECTORY_USER_IMAGES = "/home/joaquin/secret-voldemort-back/profiles_images/"
 
 app = FastAPI(
     title="Secret Voldemort",
@@ -55,7 +59,7 @@ async def register_user(user_to_reg: UserTemp):
         )
     else:
         new_user(user_to_reg.alias, user_to_reg.email,
-                 get_password_hash(user_to_reg.password), "photo")
+                 get_password_hash(user_to_reg.password))
         return {"email": user_to_reg.email}
 
 @app.post("/send_email")
@@ -128,12 +132,36 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm =
     access_token = create_token(
         data={"sub": user.email_address}, expires_delta=access_token_expires
     )
-    return {"alias": user.name, "photo": "photo",
+    return {"alias": user.name,
             "access_token": access_token, "token_type": "bearer"}
 
 @app.get("/users/me")
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return {current_user.email_address}
+
+@app.get("/user_image")
+async def get_user_image(current_user: User = Depends(get_current_user)):
+    return FileResponse(DIRRECTORY_USER_IMAGES + current_user.photo)
+
+@app.post("/upload_image")
+async def create_upload_file(file: UploadFile = File(...),
+                             current_user: User = Depends(get_current_user)):
+    contents = file.file.read()
+    if len(contents) > MAX_SIZE_FILE:
+        raise HTTPException(
+            status_code=401,
+            detail="the file exceeds the supported size. Supported size: 20KB")
+    if not (file.content_type == "image/jpeg"):
+        raise HTTPException(
+            status_code=401,
+            detail="format not accepted")
+    photo = str(current_user.id) + ".jpg"
+    files = open(DIRRECTORY_USER_IMAGES + photo, "wb+")
+    update_photo(current_user.email_address, photo)
+    files.write(contents)
+    files.close()
+    user = get_user_by_email(current_user.email_address)
+    return FileResponse(DIRRECTORY_USER_IMAGES + user.photo)
 
 @app.post("/newgame")
 async def create_game(game: ConfigGame,
@@ -388,9 +416,22 @@ async def get_two(game_name: str):
 
 @app.get("/phase")
 async def get_phase(game_name):
-    return {"phase_game": get_phase_game(game_name)}
+    if (get_phase_game(game_name) == 0):
+        players_list = get_player_list(game_name)
+        list_players_dict = []
+        for p in players_list:
+            list_players_dict.append(player_to_dict(p.id))
+        return {"phase_game": get_phase_game(game_name), "players_list": list_players_dict}
+    else:
+        return {"phase_game": get_phase_game(game_name)}
 
-
+@app.get("/get_players")
+async def get_players_in_game(game_name: str):
+    players_list = get_player_list(game_name)
+    list_player_dict = []
+    for p in players_list:
+        list_player_dict.append(player_to_dict(p.id))
+    return {"players_list": list_player_dict}
 
 @app.get("/dirmin_elect")
 async def get_min_dir_elect(game_name: str):
@@ -407,8 +448,8 @@ async def get_min_dir_elect(game_name: str):
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
 
-@app.post("/change_profile")
-async def change_profile(current_user: User = Depends(get_current_user),
+@app.post("/change_alias")
+async def change_alias(current_user: User = Depends(get_current_user),
                         nickname: Optional[str] = None):
     if nickname is not None:
         update_username(current_user.email_address, nickname)
