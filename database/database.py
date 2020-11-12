@@ -690,9 +690,21 @@ def game_to_dict(game):
     return dict_g
 
 @pony.orm.db_session
+def update_player_alive(player_id):
+    Player[player_id].is_alive = False
+
+
+@pony.orm.db_session
+def player_belong_to_game(player_id,game_name):
+    game = get_game_by_name(game_name)
+    player = Player[player_id]
+    return (player in game.players)
+
+@pony.orm.db_session
 def get_games():
     list_game = Game.select(lambda g: g.initial_date is None)[:]
     dict_g = []
     for g in list(filter(lambda g: g.max_players > num_of_players(g.name), list_game)):
         dict_g.append(game_to_dict(g))
     return dict_g
+
