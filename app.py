@@ -142,27 +142,15 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 
 @app.get("/user_image")
 async def get_user_image(current_user: User = Depends(get_current_user)):
-    return FileResponse(DIRRECTORY_USER_IMAGES + current_user.photo)
+    return (get_user_by_email(current_user.email_address).photo)
 
 @app.post("/upload_image")
-async def create_upload_file(file: UploadFile = File(...),
-                             current_user: User = Depends(get_current_user)):
-    contents = file.file.read()
-    if len(contents) > MAX_SIZE_FILE:
-        raise HTTPException(
-            status_code=401,
-            detail="the file exceeds the supported size. Supported size: 20KB")
-    if not (file.content_type == "image/jpeg"):
-        raise HTTPException(
-            status_code=401,
-            detail="format not accepted")
-    photo = str(current_user.id) + ".jpg"
-    files = open(DIRRECTORY_USER_IMAGES + photo, "wb+")
-    update_photo(current_user.email_address, photo)
-    files.write(contents)
-    files.close()
-    user = get_user_by_email(current_user.email_address)
-    return FileResponse(DIRRECTORY_USER_IMAGES + user.photo)
+async def create_upload_file(photo_link: str ,current_user: User = Depends(get_current_user)):
+    print(photo_link)
+    if photo_link is None:
+        raise HTTPException(status_code=400, detail="the photo is None")
+    save_user_image(current_user.email_address,photo_link)
+    return ("Photo uploaded successfully!")
 
 
 @app.post("/change_password")

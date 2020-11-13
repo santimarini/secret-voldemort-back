@@ -13,7 +13,7 @@ class User(db.Entity):
     name = pony.orm.Required(str)
     email_address = pony.orm.Required(str, unique=True) #SK
     password = pony.orm.Required(str)
-    photo = pony.orm.Optional(str)  # supongo que habria que guardar una url a la foto, no lo se
+    photo = pony.orm.Optional(str)
     verified = pony.orm.Required(bool)
     players = Set('Player')
     finished_games = Set('FinishedGames')
@@ -722,3 +722,7 @@ def get_games():
         dict_g.append(game_to_dict(g))
     return dict_g
 
+@pony.orm.db_session
+def save_user_image(email,photo_link):
+    user = get_user_by_email(email)
+    user.photo = photo_link
