@@ -5,19 +5,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
 MAX_LEN_ALIAS = 16
-MIN_LEN_ALIAS = 3
+MIN_LEN_ALIAS = 4
 MAX_LEN_PASSWORD = 16
 MIN_LEN_PASSWORD = 4
 MAX_LEN_EMAIL = 30
-MIN_LEN_EMAIL = 8
-MAX_LEN_GAME_NAME =  10
-MIN_LEN_GAME_NAME = 3
+MIN_LEN_EMAIL = 10
+MAX_LEN_GAME_NAME =  16
+MIN_LEN_GAME_NAME = 4
 MIN_NUM_OF_PLAYERS = 5
 MAX_NUM_OF_PLAYERS = 10
 MIN_CARDS_IN_STACK = 3
 MAX_BOX_FENIX_ORDER = 5
 MAX_BOX_DEATH_EATERS = 6
-MAX_SIZE_FILE = 4000000
 
 DIRRECTORY_USER_IMAGES = "/home/joaquin/secret-voldemort-back/profiles_images/"
 
@@ -139,18 +138,26 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm =
 async def read_users_me(current_user: User = Depends(get_current_user)):
     return {current_user.email_address}
 
+@app.post("/change_alias")
+async def change_alias(current_user: User = Depends(get_current_user),
+                        alias: Optional[str] = None):
+    if alias is not None:
+        update_username(current_user.email_address, alias)
+    return {"new_alias": get_user_by_email(current_user.email_address).name}
+
 
 @app.get("/user_image")
 async def get_user_image(current_user: User = Depends(get_current_user)):
-    return (get_user_by_email(current_user.email_address).photo)
+    if current_user.photo == "":
+        raise HTTPException(status_code=401, detail="no photo")
+    return current_user.photo
+
 
 @app.post("/upload_image")
-async def create_upload_file(photo_link: str ,current_user: User = Depends(get_current_user)):
-    print(photo_link)
-    if photo_link is None:
-        raise HTTPException(status_code=400, detail="the photo is None")
-    save_user_image(current_user.email_address,photo_link)
-    return ("Photo uploaded successfully!")
+async def save_image(photo: str,
+                             current_user: User = Depends(get_current_user)):
+    update_photo(current_user.email_address, photo)
+    return {"photo updated succesfully"}
 
 
 @app.post("/change_password")
@@ -191,6 +198,11 @@ async def change_password(old_password: str,
             )
         update_password(get_password_hash(new_password),user.id)
         return{"changed password"}
+
+@app.get("/show_games")
+async def game_list():
+    games = get_games()
+    return {"games_list": games}
 
 
 @app.post("/newgame")
@@ -422,6 +434,8 @@ async def proclaim_card(card_id,game_name):
             set_phase_game(game_name, 5)
             finish_game_id = end_game(game_name,box.loyalty)
             return finished_game_to_dict(finish_game_id)
+        if box.spell is not None:
+            set_phase_game(game_name,6)
         else:
             set_phase_game(game_name, 1)
         return {
@@ -453,6 +467,13 @@ async def avada_kedavra(game_name: str, victim: int):
     else:
         return {"player_murdered": player_dict}
 
+@app.get("/game_is_started")
+async def game_is_started(game_name: str):
+    if not game_is_not_started(game_name):
+        return {"status": 'started'}
+    else:
+        return {"status": 'not started'}
+
 @app.get("/postulated")
 async def get_two(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
@@ -465,7 +486,6 @@ async def get_two(game_name: str):
         "post_minister": post_min
     }
 
-
 @app.get("/phase")
 async def get_phase(game_name):
     if (get_phase_game(game_name) == 0):
@@ -474,8 +494,16 @@ async def get_phase(game_name):
         for p in players_list:
             list_players_dict.append(player_to_dict(p.id))
         return {"phase_game": get_phase_game(game_name), "players_list": list_players_dict}
+    if (get_phase_game(game_name) == 6):
+        box = get_last_box_used(game_name)
+        return {"phase_game": get_phase_game(game_name), "spell": box.spell}
     else:
         return {"phase_game": get_phase_game(game_name)}
+
+@app.get("/get_player")
+async def get_player(game_name: str, current_user: User = Depends(get_current_user)):
+    player_id = get_player_in_game_by_email(game_name,current_user.email_address)
+    return {"player": player_to_dict(player_id)}
 
 @app.get("/get_players")
 async def get_players_in_game(game_name: str):
@@ -499,18 +527,4 @@ async def get_min_dir_elect(game_name: str):
                 "elect_dir": player_dir}
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
-
-
-@app.post("/change_alias")
-async def change_alias(current_user: User = Depends(get_current_user),
-                        nickname: Optional[str] = None):
-    if nickname is not None:
-        update_username(current_user.email_address, nickname)
-    return {"new_username": get_user_by_email(current_user.email_address).name}
-
-  
-@app.get("/show_games")
-async def game_list():
-    games = get_games()
-    return {"games_list": games}
 

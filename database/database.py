@@ -698,9 +698,9 @@ def game_to_dict(game):
     return dict_g
 
 @pony.orm.db_session
-def update_photo(user_email, binary_file):
+def update_photo(user_email, photo):
     user = get_user_by_email(user_email)
-    user.photo = binary_file
+    user.photo = photo
     commit()
 
 @pony.orm.db_session
@@ -726,3 +726,23 @@ def get_games():
 def save_user_image(email,photo_link):
     user = get_user_by_email(email)
     user.photo = photo_link
+
+@pony.orm.db_session
+def get_player_in_game_by_email(game_name,email):
+    user = get_user_by_email(email)
+    game = get_game_by_name(game_name)
+    for p in user.players:
+        if p.actualGame == game.id:
+            player = p
+    return player.id
+
+@pony.orm.db_session
+def get_last_box_used(game_name):
+    template = get_template_death_e(game_name)
+    i = 0
+    for b in template:
+        if (b.is_used):
+            i += 1
+        if not b.is_used:
+            break
+    return template[i]
