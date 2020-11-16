@@ -1,7 +1,9 @@
 import sys
 import os
 
-sys.path.insert(1, '/home/joaquin/secret-voldemort-back/database')
+DATABASE_PATH = '/home/valentin/secvold/secret-voldemort-back/database'
+
+sys.path.insert(1, DATABASE_PATH)
 
 from database import *
 

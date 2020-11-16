@@ -3,14 +3,12 @@ import requests
 import json
 import sys
 import os
+from mock_database import DATABASE_PATH
 
-sys.path.insert(1, '/home/joaquin/secret-voldemort-back/database')
-try:
-    os.remove('/home/joaquin/secret-voldemort-back/database/database.sqlite')
-except OSError:
-    pass
+
+sys.path.insert(1, DATABASE_PATH)
+
 from database import *
-
 
 class GameInitTest(unittest.TestCase):
     api = 'http://localhost:8000'
