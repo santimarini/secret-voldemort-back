@@ -61,9 +61,26 @@ class UserTest(unittest.TestCase):
         self.assertEqual(200, response.status_code)
 
     def test_save_image(self):
-        response = requests.post(self.api + self.login,
-                                 params={"photo" : "www.fakehost/image"})
-        self.assertEqual(200, response.status_code)
+        r5 = requests.post(self.api + self.register,
+                           data='{"alias": "user_mock", "email": "user_mock@gmail.com", "password": "123456"}')
+
+        r6 = requests.post(self.api + self.send_mail, params={"user_email": "user_mock@gmail.com"})
+        resp_token_val = json.loads(r6.text)
+        token_val = resp_token_val["token_val"]
+
+        r7 = requests.get(self.api + self.validate_email + token_val)
+
+        response1 = requests.post(self.api + self.login,
+                                  data={"username": "user_mock@gmail.com", "password": "123456"})
+        resp_token = json.loads(response1.text)
+        token = resp_token["access_token"]
+        type = resp_token["token_type"]
+        data2 = {"photo" : "www.fakehost/image"}
+        r2 = requests.post(self.api + self.save_image, params=data2, headers={'Content-Type': 'application/json',
+                                                                               'Authorization': 'Bearer {}'.format(
+                                                                                   token)})
+        self.assertEqual(200, r2.status_code)
+
 
     def test_change_alias_ok(self):
         # Register user
