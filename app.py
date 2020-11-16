@@ -456,11 +456,11 @@ async def avada_kedavra(game_name: str, victim: int):
         raise HTTPException(status_code=400,
                             detail="player doesnt belong to game")
     player_dict = player_to_dict(victim)
-    if not player_dict.is_alive:
+    if not player_dict["is_alive"]:
         raise HTTPException(status_code=401,
                             detail="This player already death")
     update_player_alive(victim)
-    if player_dict.rol == "Voldemort":
+    if player_dict["rol"] == "Voldemort":
         set_phase_game(game_name, 5)
         finish_game_id = end_game(game_name, "Fenix Order")
         return finished_game_to_dict(finish_game_id)
@@ -494,6 +494,8 @@ async def get_phase(game_name):
         for p in players_list:
             list_players_dict.append(player_to_dict(p.id))
         return {"phase_game": get_phase_game(game_name), "players_list": list_players_dict}
+    if(get_phase_game(game_name) == 1):
+        return {"player_murdered" : player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
     if (get_phase_game(game_name) == 6):
         box = get_last_box_used(game_name)
         return {"phase_game": get_phase_game(game_name), "spell": box.spell}

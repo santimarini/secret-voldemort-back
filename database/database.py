@@ -64,6 +64,7 @@ class Turn(db.Entity):
     elect_dir = Optional(int)
     Pos_votes = Optional(int)
     Neg_votes = Optional(int)
+    player_killed = Optional(int)
 
 class Proclamation(db.Entity):
     loyalty = Required(str)
@@ -165,6 +166,16 @@ def player_doesnt_exists(player_id):
         return False
     except:
         return True
+
+@pony.orm.db_session
+def set_player_killed(turn_id,player_id):
+    turn = get_turn(turn_id)
+    turn.player_killed = player_id
+
+#the player returned can be None
+@pony.orm.db_session
+def get_player_killed(turn_id):
+    return (get_turn(turn_id).player_killed)
 
 #given a name, returns the associate game
 @pony.orm.db_session
