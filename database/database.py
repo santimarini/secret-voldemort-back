@@ -721,9 +721,12 @@ def update_player_alive(player_id):
 
 @pony.orm.db_session
 def player_belong_to_game(player_id,game_name):
-    game = get_game_by_name(game_name)
-    player = Player[player_id]
-    return (player in game.players)
+    if player_doesnt_exists(player_id):
+        return False
+    else:
+        game = get_game_by_name(game_name)
+        player = Player[player_id]
+        return (player in game.players)
 
 @pony.orm.db_session
 def get_games():
@@ -742,10 +745,12 @@ def save_user_image(email,photo_link):
 def get_player_in_game_by_email(game_name,email):
     user = get_user_by_email(email)
     game = get_game_by_name(game_name)
+    player_id = 0
     for p in user.players:
-        if p.actualGame == game.id:
-            player = p
-    return player.id
+        if p.actualGame.id == game.id:
+            player_id = p.id
+    return player_id
+
 
 @pony.orm.db_session
 def get_last_box_used(game_name):
@@ -754,6 +759,11 @@ def get_last_box_used(game_name):
     for b in template:
         if (b.is_used):
             i += 1
-        if not b.is_used:
+        else:
             break
-    return template[i]
+    if i < 0:
+        return template[0]
+    else:
+        return template[i-1]
+
+
