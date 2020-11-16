@@ -492,7 +492,6 @@ async def get_two(game_name: str):
         "post_director": post_dir,
         "post_minister": post_min
     }
-
 @app.get("/phase")
 async def get_phase(game_name):
     if (get_phase_game(game_name) == 0):
@@ -507,7 +506,8 @@ async def get_phase(game_name):
         box = get_last_box_used(game_name)
         return {"phase_game": get_phase_game(game_name), "spell": box.spell}
     else:
-        return {"phase_game": get_phase_game(game_name)}
+        return {"phase_game": get_phase_game(game_name),
+        "player_murdered" : player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
 
 @app.get("/get_player")
 async def get_player(game_name: str, current_user: User = Depends(get_current_user)):

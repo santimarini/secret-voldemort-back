@@ -2,7 +2,6 @@ import unittest
 import requests
 import json
 
-
 class GameTest(unittest.TestCase):
     api = 'http://localhost:8000'
     join_game= '/game/game_name'
@@ -12,75 +11,86 @@ class GameTest(unittest.TestCase):
     min_and_dir = '/dirmin_elect'
     game = '/newgame'
     start = '/start'
-    show_game = '/show_games'
+    show_games = '/show_games'
     avada_kedavra = '/avada_kedavra'
     register = '/signup'
     send_mail = '/send_email'
     validate_email = '/validate/'
     login = '/token'
-    
+
     def test_next_turn_ok(self):
         game_name = {"game_name" : "game_name"}
         response = requests.post(self.api + self.next_turn,
                                 params=game_name)
-        print(response.url)
-        print(response.reason)
+
         self.assertEqual(200,response.status_code)
 
     def test_next_turn_inexistent_game(self):
         game_name = {"game_name" : "asd"}
         response = requests.post(self.api + self.next_turn,
                                 params=game_name)
-        print(response.url)
+        detail = {"detail" : "inexistent game"}
+        self.assertEqual(detail,json.loads(response.text))
         self.assertEqual(400,response.status_code)
 
     def test_next_turn_game_not_started(self):
         game_name = {"game_name" : "game_name_not_started"}
         response = requests.post(self.api + self.next_turn,
                                 params=game_name)
-        print(response.url)
+        detail = {"detail": "game is not started"}
+        self.assertEqual(detail, json.loads(response.text))
         self.assertEqual(400,response.status_code)
 
     def test_post_dir_ok(self):
         parameters = {"game_name" : "game_name", "dir" : 2}
         response = requests.put(self.api + self.post_dir,
                                  params=parameters)
-        print(response.url)
         self.assertEqual(200, response.status_code)
 
     def test_post_dir_game_not_started(self):
         parameters = {"game_name" : "game_name_not_started", "dir" : 2}
         response = requests.put(self.api + self.post_dir,
                                  params=parameters)
-        print(response.url)
+        detail = {"detail": "game is not started"}
+        self.assertEqual(detail, json.loads(response.text))
         self.assertEqual(400, response.status_code)
 
     def test_post_dir_inexistent_game(self):
         parameters = {"game_name": "asd", "dir": 2}
         response = requests.put(self.api + self.post_dir,
                                 params=parameters)
-        print(response.url)
+        detail = {"detail": "inexistent game"}
+        self.assertEqual(detail, json.loads(response.text))
         self.assertEqual(400, response.status_code)
 
     def test_post_dir_inexistent_player(self):
         parameters = {"game_name" : "game_name", "dir" : -1}
         response = requests.put(self.api + self.post_dir,
                                  params=parameters)
-        print(response.url)
+        detail = {"detail": "player doesn't exist"}
+        self.assertEqual(detail, json.loads(response.text))
         self.assertEqual(400, response.status_code)
 
     def test_obtain_elect_min_and_dir_ok(self):
         game_name = {"game_name": "game_name"}
         response = requests.get(self.api + self.min_and_dir,
                                 params=game_name)
-        print(response.url)
         self.assertEqual(200, response.status_code)
+
+    def test_obtain_elect_min_and_dir_game_not_started(self):
+        game_name = {"game_name": "game_name_not_started"}
+        response = requests.get(self.api + self.min_and_dir,
+                                params=game_name)
+        detail = {"detail": "game is not started"}
+        self.assertEqual(detail, json.loads(response.text))
+        self.assertEqual(400, response.status_code)
 
     def test_obtain_elect_min_and_dir_inexistent_game(self):
         game_name = {"game_name": "asdasd"}
         response = requests.get(self.api + self.min_and_dir,
                                 params=game_name)
-        print(response.url)
+        detail = {"detail": "inexistent game"}
+        self.assertEqual(detail, json.loads(response.text))
         self.assertEqual(400, response.status_code)
         
 
@@ -126,8 +136,11 @@ class GameTest(unittest.TestCase):
         self.assertEqual(404, response.status_code)
 
     def test_show_games(self):
-        response = requests.get(self.api + self.show_game)
-        self.assertEqual(200, response.status_code)
+        response = requests.get(self.api + self.show_games)
+        games = {'games_list': [{'id': 2, 'name': 'game_name_not_started', 'players': 3, 'max_players': 10},\
+                                {'id': 3, 'name': 'game_name_test', 'players': 0, 'max_players': 5}]}
+        self.assertEqual(games,json.loads(response.text))
+        self.assertEqual(200,response.status_code)
 
     def test_avada_kedavra_ok(self):
         response = requests.post(self.api + self.start, params={ "game_name": "game_init_test_7" })
