@@ -7,6 +7,7 @@ class UserTest(unittest.TestCase):
     api = 'http://localhost:8000'
     register = '/signup'
     login = '/token'
+    save_image = '/upload_image'
 
     # TEST REGISTER ENDPOINT
     def test_new_user(self):
@@ -55,7 +56,10 @@ class UserTest(unittest.TestCase):
                                  params={"username": "user_seven@gmail.com", "password": "123456"})
         self.assertEqual(200, response.status_code)
         
-    
+    def test_save_image(self):
+        response = requests.post(self.api + self.login,
+                                 params={"photo" : "www.fakehost/image"})
+        self.assertEqual(200, response.status_code)
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,6 +1,6 @@
 import unittest
 import requests
-
+import json
 
 class GameTest(unittest.TestCase):
     api = 'http://localhost:8000'
@@ -11,7 +11,9 @@ class GameTest(unittest.TestCase):
     min_and_dir = '/dirmin_elect'
     game = '/newgame'
     start = '/start'
-    
+    show_games = "/show_games"
+
+
     def test_next_turn_ok(self):
         game_name = {"game_name" : "game_name"}
         response = requests.post(self.api + self.next_turn,
@@ -104,6 +106,12 @@ class GameTest(unittest.TestCase):
     def test_start_game_not_exists(self):
         response = requests.post(self.api + self.start, params={ "game_name": "gameNotExist" })
         self.assertEqual(404, response.status_code)
+
+    def test_show_game(self):
+        response = requests.get(self.api + self.show_games)
+        print(json.loads(response.text))
+        self.assertEqual(200,response.status_code)
+
 
 
 if __name__ == '__main__':
