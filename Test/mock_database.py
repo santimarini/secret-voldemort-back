@@ -1,15 +1,17 @@
 import sys
 import os
 
-sys.path.insert(1, '/home/joaquin/secret-voldemort-back/database')
+DATABASE_PATH = '/home/valentin/secvold/secret-voldemort-back/database'
+
+sys.path.insert(1, DATABASE_PATH)
 
 from database import *
 
-new_user('user1', 'emailaddress1@gmail.com', 'password', 'photo')
-new_user('user2', 'emailaddress2@gmail.com', 'password', 'photo')
-new_user('user3', 'emailaddress3@gmail.com', 'password', 'photo')
-new_user('user4', 'emailaddress4@gmail.com', 'password', 'photo')
-new_user('user5', 'emailaddress5@gmail.com', 'password', 'photo')
+new_user('user1', 'emailaddress1@gmail.com', 'password')
+new_user('user2', 'emailaddress2@gmail.com', 'password')
+new_user('user3', 'emailaddress3@gmail.com', 'password')
+new_user('user4', 'emailaddress4@gmail.com', 'password')
+new_user('user5', 'emailaddress5@gmail.com', 'password')
 #new_player('emailaddress1@gmail.com')
 p2 = new_player('emailaddress2@gmail.com')
 p3 = new_player('emailaddress3@gmail.com')
@@ -37,11 +39,11 @@ if np == 7 or np == 8:
 if np == 9 or np == 10:
     config_template_10players(game_name)
 
-new_user('user1', 'emailaddress10@gmail.com', 'password', 'photo')
-new_user('user2', 'emailaddress20@gmail.com', 'password', 'photo')
-new_user('user3', 'emailaddress30@gmail.com', 'password', 'photo')
-new_user('user4', 'emailaddress40@gmail.com', 'password', 'photo')
-new_user('user5', 'emailaddress50@gmail.com', 'password', 'photo')
+new_user('user1', 'emailaddress10@gmail.com', 'password')
+new_user('user2', 'emailaddress20@gmail.com', 'password')
+new_user('user3', 'emailaddress30@gmail.com', 'password')
+new_user('user4', 'emailaddress40@gmail.com', 'password')
+new_user('user5', 'emailaddress50@gmail.com', 'password')
 #pp2 = new_player('emailaddress20@gmail.com')
 pp3 = new_player('emailaddress30@gmail.com')
 pp4 = new_player('emailaddress40@gmail.com')
