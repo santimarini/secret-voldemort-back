@@ -1,5 +1,6 @@
 import unittest
 import requests
+import json
 
 
 class GameTest(unittest.TestCase):
@@ -11,6 +12,12 @@ class GameTest(unittest.TestCase):
     min_and_dir = '/dirmin_elect'
     game = '/newgame'
     start = '/start'
+    show_game = '/show_games'
+    avada_kedavra = '/avada_kedavra'
+    register = '/signup'
+    send_mail = '/send_email'
+    validate_email = '/validate/'
+    login = '/token'
     
     def test_next_turn_ok(self):
         game_name = {"game_name" : "game_name"}
@@ -80,11 +87,24 @@ class GameTest(unittest.TestCase):
     def register_user_for_game(self):
         # Register user
         requests.post(self.api + self.register,
-                      data='{ "username": "usergame", "email": "usergame@gmail.com", "password": "123456" }')
+                      data='{ "alias": "usergame", "email": "usergame@gmail.com", "password": "123456" }')
 
     def test_newgame(self):
-        response = requests.post(self.api + self.game,
-                                 data={ "name":"game_test_new", "max_players":"5"}, params={"email":"usergame@gmail.com"})
+        r5 = requests.post(self.api + self.register,
+                      data='{ "alias": "usergame1", "email": "usergame1@gmail.com", "password": "123456" }')
+        # Send Mail
+        r6 = requests.post(self.api + self.send_mail, params={"user_email": "usergame1@gmail.com"})
+        resp_token_val = json.loads(r6.text)
+        token_val = resp_token_val["token_val"]
+
+        # Validate Email
+        r7 = requests.get(self.api + self.validate_email + token_val)
+        # Login
+        response = requests.post(self.api + self.login,
+                                 data={"username": "usergame1@gmail.com", "password": "123456"})
+        # Create Game
+        response2 = requests.post(self.api + self.game, data='{"username":"usergame1@gmail.com", "password": "123456"}',
+                                 params={ "name":"game_test_new", "max_players":"5"})
         self.assertEqual(200, response.status_code)
 
     def test_game_exist(self):
@@ -105,6 +125,45 @@ class GameTest(unittest.TestCase):
         response = requests.post(self.api + self.start, params={ "game_name": "gameNotExist" })
         self.assertEqual(404, response.status_code)
 
+    def test_show_games(self):
+        response = requests.get(self.api + self.show_game)
+        self.assertEqual(200, response.status_code)
+
+    def test_avada_kedavra_ok(self):
+        response = requests.post(self.api + self.start, params={ "game_name": "game_init_test_7" })
+        resp_start = json.loads(response.text)
+        player_id = resp_start["players"][1]["id"]
+        response1 = requests.get(self.api + self.avada_kedavra, params= {"game_name": "game_init_test_7", "victim": player_id})
+        self.assertEqual(200, response1.status_code)
+
+    def test_avada_kedavra_game_doesnt_exist(self):
+        response1 = requests.get(self.api + self.avada_kedavra,
+                                 params={"game_name": "game_doesnt_exist", "victim": 12345})
+        self.assertEqual(400, response1.status_code)
+
+    def test_avada_kedavra_game_not_started(self):
+        response1 = requests.get(self.api + self.avada_kedavra,
+                                 params={"game_name": "game_init_test_8", "victim": 12345})
+        self.assertEqual(400, response1.status_code)
+
+    def test_avada_kedavra_player_not_in_game(self):
+        response = requests.post(self.api + self.start, params={"game_name": "game_init_test_9"})
+        response1 = requests.get(self.api + self.avada_kedavra,
+                                 params={"game_name": "game_init_test_9", "victim": 55654})
+        self.assertEqual(400, response1.status_code)
+
+    def test_avada_kedavra_player_already_death(self):
+        response = requests.post(self.api + self.start, params={ "game_name": "game_init_test_10" })
+        resp_start = json.loads(response.text)
+        player_id = resp_start["players"][1]["id"]
+        response1 = requests.get(self.api + self.avada_kedavra,
+                                 params= {"game_name": "game_init_test_10", "victim": player_id})
+        response2 = requests.get(self.api + self.avada_kedavra,
+                                 params={"game_name": "game_init_test_10", "victim": player_id})
+        print("------------------------------------------")
+        print(response2.text)
+        print("------------------------------------------")
+        self.assertEqual(401, response2.status_code)
 
 if __name__ == '__main__':
     unittest.main()

@@ -18,7 +18,6 @@ MIN_CARDS_IN_STACK = 3
 MAX_BOX_FENIX_ORDER = 5
 MAX_BOX_DEATH_EATERS = 6
 
-DIRRECTORY_USER_IMAGES = "/home/joaquin/secret-voldemort-back/profiles_images/"
 
 app = FastAPI(
     title="Secret Voldemort",
@@ -88,8 +87,7 @@ async def send_email(user_email: str):
             message = get_message(email, html)
             fm = FastMail(conf)
             await fm.send_message(message)
-            return {"Mail sent! Check your inbox. "
-                    "If you don't find it, check your spam folder"}
+            return {"token_val": validate_token}
 
 @app.get("/validate/{token}")
 async def validate_email(token:str):
@@ -141,8 +139,23 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
 @app.post("/change_alias")
 async def change_alias(current_user: User = Depends(get_current_user),
                         alias: Optional[str] = None):
-    if alias is not None:
-        update_username(current_user.email_address, alias)
+    if not is_verified(current_user.email_address):
+        raise HTTPException(
+            status_code=404,
+            detail="user not verified"
+        )
+    if get_user_by_email(current_user.email_address).name == alias:
+        raise HTTPException(
+            status_code=401,
+            detail="the alias is the same as always"
+        )
+    if len(alias) > MAX_LEN_ALIAS or \
+       len(alias) < MIN_LEN_ALIAS:
+        raise HTTPException(
+            status_code=401,
+            detail="Alias must contain 4 - 16 characters.",
+            )
+    update_username(current_user.email_address, alias)
     return {"new_alias": get_user_by_email(current_user.email_address).name}
 
 
@@ -164,25 +177,20 @@ async def save_image(photo: str,
 async def change_password(old_password: str,
                           new_password: str,
                           confirm_new_password: str,
-                          current_user: User = Depends(get_current_user)):
-    if not is_verified(current_user.email_address):
-        raise HTTPException(
-            status_code=404,
-            detail="user not verified"
-        )
+                          current_user: User = Depends(get_current_verified_user)):
     if old_password == new_password:
         raise HTTPException(
             status_code=404,
-            detail="the old password is the same as the new password"
+            detail="The old password is the same as the new password."
         )
     if (not new_password == confirm_new_password):
         raise HTTPException(
             status_code=404,
-            detail="passwords do not match"
+            detail="Passwords do not match."
         )
     invalid_fields = HTTPException(
         status_code=404,
-        detail="field size is invalid"
+        detail="Field size is invalid."
     )
     if len(new_password) > MAX_LEN_PASSWORD or \
        len(new_password) < MIN_LEN_PASSWORD or \
@@ -194,10 +202,10 @@ async def change_password(old_password: str,
         if user == False:
             raise HTTPException(
                 status_code=404,
-                detail="the old password is not the current password"
+                detail="The old password is not the current password."
             )
         update_password(get_password_hash(new_password),user.id)
-        return{"changed password"}
+        return{"Changed password."}
 
 @app.get("/show_games")
 async def game_list():
@@ -226,38 +234,36 @@ async def create_game(game: ConfigGame,
 
 
 @app.get("/game/{game_name}")
-async def join_url(game_name: str, current_user: User =
-                    Depends(get_current_verified_user)):
+async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
     if game_exists(game_name):
-        if get_game_by_name(game_name).initial_date is not None:
+        if get_game_by_name(game_name).initial_date is not None and not is_user_in_game(current_user.email_address,
+                                                                                        game_name):
             raise HTTPException(status_code=404,
                                 detail="The game has already started"
                                 )
         else:
             game = get_game_by_name(game_name)
             if not is_user_in_game(current_user.email_address, game_name):
-                if num_of_players(game_name) < game.max_players:
-                    player_id = new_player(current_user.email_address)
-                    join_game(player_id, game_name)
-                    list = get_player_list(game_name)
-                    list_dict = []
-                    for p in list:
-                        list_dict.append(player_to_dict(p.id))
-                    user_alias = get_user_by_email(
-                        current_user.email_address).name
-                    return {"alias": user_alias,
-                            "game_name": game_name,
-                            "max_players": game.max_players,
-                            "players": list_dict,
-                            "creator": game.creator}
-                else:
-                    raise HTTPException(status_code=404,
-                                        detail="The room is full"
-                                        )
-            else:
-                raise HTTPException(status_code=300,
-                                    detail="Player already in the game"
-                                    )
+                player_id = new_player(current_user.email_address)
+                join_game(player_id, game_name)
+
+        if num_of_players(game_name) < game.max_players:
+            list = get_player_list(game_name)
+            list_dict = []
+            for p in list:
+                list_dict.append(player_to_dict(p.id))
+            user_alias = get_user_by_email(
+                current_user.email_address).name
+            return {"alias": user_alias,
+                    "game_name": game_name,
+                    "max_players": game.max_players,
+                    "players": list_dict,
+                    "creator": game.creator,
+                    "phase_game": get_phase_game(game_name)}
+        else:
+            raise HTTPException(status_code=404,
+                                detail="The room is full"
+                                )
     else:
         raise HTTPException(status_code=404,
                             detail="Game is not exists"
@@ -434,7 +440,7 @@ async def proclaim_card(card_id,game_name):
             set_phase_game(game_name, 5)
             finish_game_id = end_game(game_name,box.loyalty)
             return finished_game_to_dict(finish_game_id)
-        if box.spell is not None:
+        if not box.spell == "":
             set_phase_game(game_name,6)
         else:
             set_phase_game(game_name, 1)
@@ -454,17 +460,18 @@ async def avada_kedavra(game_name: str, victim: int):
                             detail="game is not started")
     if (not player_belong_to_game(victim,game_name)):
         raise HTTPException(status_code=400,
-                            detail="player doesnt belong to game")
+                            detail="player doesnt belong to game or not exist")
     player_dict = player_to_dict(victim)
-    if not player_dict.is_alive:
+    if not player_dict["is_alive"]:
         raise HTTPException(status_code=401,
                             detail="This player already death")
     update_player_alive(victim)
-    if player_dict.rol == "Voldemort":
+    if player_dict["rol"] == "Voldemort":
         set_phase_game(game_name, 5)
         finish_game_id = end_game(game_name, "Fenix Order")
         return finished_game_to_dict(finish_game_id)
     else:
+        set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
 
 @app.get("/game_is_started")

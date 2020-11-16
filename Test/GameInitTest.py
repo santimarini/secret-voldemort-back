@@ -139,5 +139,25 @@ class GameInitTest(unittest.TestCase):
         else:
             self.assertEqual(404, response.status_code)
 
+        def test_divination(self):
+            # Start game
+            requests.post(self.api + self.start, params={"game_name": "game_init_test_7"})
+            # Init turn
+            requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_7"})
+            # Dir
+            requests.put(self.api + '/game', params={"game_name": "game_init_test_7", "dir": 22})
+            # Vote and Gob Elect
+            for i in range(5):
+                requests.put(self.api + '/game/game_init_test_7/vote',
+                             params={"game_name": "game_init_test_7", "vote": True})
+            # Get cards
+            list_of_cards_id = get_cards_in_game("game_init_test_7")
+            cards_to_proclaim = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
+            # Proclaim
+            for i in range(3):
+                proclaim(cards_to_proclaim[i])
+            response = requests.get(self.api + '/cards/draw_three_cards', params={"game_name": "game_init_test_7"})
+            self.assertEqual(200, response.status_code)
+
 if __name__ == '__main__':
     unittest.main()
