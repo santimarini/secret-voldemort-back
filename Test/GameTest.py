@@ -173,9 +173,6 @@ class GameTest(unittest.TestCase):
                                  params= {"game_name": "game_init_test_10", "victim": player_id})
         response2 = requests.get(self.api + self.avada_kedavra,
                                  params={"game_name": "game_init_test_10", "victim": player_id})
-        print("------------------------------------------")
-        print(response2.text)
-        print("------------------------------------------")
         self.assertEqual(401, response2.status_code)
 
 if __name__ == '__main__':

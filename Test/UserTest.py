@@ -57,7 +57,6 @@ class UserTest(unittest.TestCase):
         # Login user
         response = requests.post(self.api + self.login,
                                  data={"username": "user_seven@gmail.com", "password": "123456"})
-        print(json.loads(response.text))
         self.assertEqual(200, response.status_code)
 
     def test_save_image(self):
@@ -102,6 +101,64 @@ class UserTest(unittest.TestCase):
                                                                                 'Authorization': 'Bearer {}'.format(
                                                                                     token)})
         self.assertEqual(200, r2.status_code)
+
+    def test_change_alias_great(self):
+        # Register user
+        r5 = requests.post(self.api + self.register,
+                      data='{"alias": "user_alias_1", "email": "user_alias_1@gmail.com", "password": "123456"}')
+        # Send Mail
+        r6 = requests.post(self.api + self.send_mail, params={"user_email": "user_alias_1@gmail.com"})
+        resp_token_val = json.loads(r6.text)
+        token_val = resp_token_val["token_val"]
+        # Validate Email
+        r7 = requests.get(self.api + self.validate_email + token_val)
+        # Login
+        response1 = requests.post(self.api + self.login,
+                                  data={"username": 'user_alias_1@gmail.com', "password": "123456"})
+        resp_token = json.loads(response1.text)
+        token = resp_token["access_token"]
+        params1 = {"alias": "alias_changegreat"}
+        r2 = requests.post(self.api + '/change_alias', params=params1, headers={'Content-Type': 'application/json',
+                                                                                'Authorization': 'Bearer {}'.format(
+                                                                                    token)})
+        self.assertEqual(401, r2.status_code)
+
+    def test_change_alias_les(self):
+        # Register user
+        r5 = requests.post(self.api + self.register,
+                      data='{"alias": "user_alias_2", "email": "user_alias_2@gmail.com", "password": "123456"}')
+        # Send Mail
+        r6 = requests.post(self.api + self.send_mail, params={"user_email": "user_alias_2@gmail.com"})
+        resp_token_val = json.loads(r6.text)
+        token_val = resp_token_val["token_val"]
+        # Validate Email
+        r7 = requests.get(self.api + self.validate_email + token_val)
+        # Login
+        response1 = requests.post(self.api + self.login,
+                                  data={"username": 'user_alias_2@gmail.com', "password": "123456"})
+        resp_token = json.loads(response1.text)
+        token = resp_token["access_token"]
+        params1 = {"alias": "als"}
+        r2 = requests.post(self.api + '/change_alias', params=params1, headers={'Content-Type': 'application/json',
+                                                                                'Authorization': 'Bearer {}'.format(
+                                                                                    token)})
+        self.assertEqual(401, r2.status_code)
+
+    def test_change_alias_email_not_verified(self):
+        # Register user
+        r5 = requests.post(self.api + self.register,
+                      data='{"alias": "user_alias_3", "email": "user_alias_3@gmail.com", "password": "123456"}')
+
+        # Login
+        response1 = requests.post(self.api + self.login,
+                                  data={"username": 'user_alias_3@gmail.com', "password": "123456"})
+        resp_token = json.loads(response1.text)
+        token = resp_token["access_token"]
+        params1 = {"alias": "other_alias"}
+        r2 = requests.post(self.api + '/change_alias', params=params1, headers={'Content-Type': 'application/json',
+                                                                                'Authorization': 'Bearer {}'.format(
+                                                                                    token)})
+        self.assertEqual(401, r2.status_code)
 
     def test_change_password_ok(self):
         r5 = requests.post(self.api + self.register,

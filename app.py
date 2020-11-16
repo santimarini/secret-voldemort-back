@@ -141,7 +141,7 @@ async def change_alias(current_user: User = Depends(get_current_user),
                         alias: Optional[str] = None):
     if not is_verified(current_user.email_address):
         raise HTTPException(
-            status_code=404,
+            status_code=401,
             detail="user not verified"
         )
     if get_user_by_email(current_user.email_address).name == alias:
