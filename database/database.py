@@ -87,7 +87,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password):
     User(name=name, email_address=email_address, password=password,
-         photo="", verified=False)
+         photo="", verified=True)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -110,7 +110,7 @@ def update_username(email, nickname):
     user = get_user_by_email(email)
     user.name = nickname
 
-    
+
 # replace the old password with a new one
 @pony.orm.db_session
 def update_password(new_password, user_id):
@@ -470,7 +470,7 @@ def get_status_vote(turn_id):
     turn = get_turn(turn_id)
     return turn.Neg_votes < turn.Pos_votes
 
-@pony.orm.db_session  
+@pony.orm.db_session
 def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
     turn = get_turn(turn_id)
     if ((turn.elect_min is None) and (turn.elect_dir is None)):
@@ -567,7 +567,7 @@ def box_to_dict(box_id):
 @pony.orm.db_session
 def get_box(box_id):
     return (Box[box_id])
-    
+
 
 @pony.orm.db_session
 def set_used_box(box_id):
@@ -617,7 +617,7 @@ def end_game(game_name, loyalty):
     delete_turn(game_name)
     return finish_game_id
 
-    
+
 @pony.orm.db_session
 def is_card_discard(card_id):
     card = Proclamation[card_id]
@@ -631,6 +631,19 @@ def set_user_verified(user_email):
 
 list_roles_death_eaters = ["Voldemort", "Bellatrix", "Draco", "Dolores Umbridge"]
 list_roles_fenix_order = ["Harry Potter", "Hermione", "Ronald", "Dumbledore", "Sirius Black", "Hagrid"]
+
+
+
+@pony.orm.db_session
+def assign_roles_2players(game_name):
+    player_list = get_player_list(game_name)
+    random.shuffle(player_list)
+    player_list[0].loyalty = "Death Eaters"
+    player_list[0].rol = "Draco"
+    player_list[1].loyalty = "Fenix Order"
+    player_list[1].rol = "Harry Potter"
+
+
 
 @pony.orm.db_session
 def assign_roles_6players(game_name):
@@ -685,7 +698,7 @@ def assign_roles_10players(game_name):
 
 @pony.orm.db_session
 def config_boards(game_name, n_players):
-    if n_players == 5 or n_players == 6:
+    if n_players == 5 or n_players == 6 or n_players == 2:
         config_template_6players(game_name)
     if n_players == 7 or n_players == 8:
         config_template_8players(game_name)
@@ -694,6 +707,8 @@ def config_boards(game_name, n_players):
 
 @pony.orm.db_session
 def assing_loyalty_and_rol(game_name, n_players):
+    if n_players == 2:
+        assign_roles_2players(game_name)
     if n_players == 5 or n_players == 6:
         assign_roles_6players(game_name)
     if n_players == 7 or n_players == 8:

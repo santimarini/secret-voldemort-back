@@ -464,8 +464,6 @@ async def avada_kedavra(game_name: str, victim: int):
     update_player_alive(victim)
     if player_dict["rol"] == "Voldemort":
         set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, "Fenix Order")
-        return finished_game_to_dict(finish_game_id)
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
