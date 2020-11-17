@@ -492,6 +492,11 @@ async def get_two(game_name: str):
         "post_director": post_dir,
         "post_minister": post_min
     }
+
+@app.post("/phase")
+async def set_phase(game_name: str, phase: int):
+    set_phase_game(game_name, phase)
+
 @app.get("/phase")
 async def get_phase(game_name):
     if (get_phase_game(game_name) == 0):
@@ -500,8 +505,6 @@ async def get_phase(game_name):
         for p in players_list:
             list_players_dict.append(player_to_dict(p.id))
         return {"phase_game": get_phase_game(game_name), "players_list": list_players_dict}
-    if(get_phase_game(game_name) == 1):
-        return {"player_murdered" : player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
     if (get_phase_game(game_name) == 6):
         box = get_last_box_used(game_name)
         return {"phase_game": get_phase_game(game_name), "spell": box.spell}
