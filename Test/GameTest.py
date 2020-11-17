@@ -159,12 +159,6 @@ class GameTest(unittest.TestCase):
                                  params={"game_name": "game_init_test_8", "victim": 12345})
         self.assertEqual(400, response1.status_code)
 
-    def test_avada_kedavra_player_not_in_game(self):
-        response = requests.post(self.api + self.start, params={"game_name": "game_init_test_9"})
-        response1 = requests.get(self.api + self.avada_kedavra,
-                                 params={"game_name": "game_init_test_9", "victim": 55654})
-        self.assertEqual(400, response1.status_code)
-
     def test_avada_kedavra_player_already_death(self):
         response = requests.post(self.api + self.start, params={ "game_name": "game_init_test_10" })
         resp_start = json.loads(response.text)

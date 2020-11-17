@@ -26,7 +26,7 @@ app = FastAPI(
 )
 
 origins = [
-    "http://localhost:3000"
+    "http://localhost:3000",
 ]
 
 app.add_middleware(
@@ -273,10 +273,6 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
 async def start_game(game_name: str):
     if  get_game_by_name(game_name) is None:
         raise HTTPException(status_code=404, detail="The game is not exist")
-    if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
-        raise HTTPException(status_code=403,
-                            detail="There aren't enough players"
-                            )
     set_game_started(game_name)
     set_phase_game(game_name,1)
     new_turn(game_name)
@@ -387,7 +383,7 @@ async def draw_three_cards(game_name: str):
         return {"cards_list" : cards_list}
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
-        
+
 @app.put("/cards/discard_min")
 async def discard_card_min(card_id: int, game_name: str):
     if card_id in get_cards_in_game(game_name):
@@ -419,7 +415,7 @@ async def discard_card_dir(card_id: int, game_name: str):
         return {"card": card}
     else:
         raise HTTPException(status_code=404, detail="card not available")
-        
+
 @app.put("/cards/proclaim")
 async def proclaim_card(card_id,game_name):
     if game_exists(game_name):
@@ -456,7 +452,7 @@ async def avada_kedavra(game_name: str, victim: int):
         raise HTTPException(status_code=400,
                             detail="the game not exist")
     if game_is_not_started(game_name):
-        raise HTTPException(status_code=400, 
+        raise HTTPException(status_code=400,
                             detail="game is not started")
     if (not player_belong_to_game(victim,game_name)):
         raise HTTPException(status_code=400,
