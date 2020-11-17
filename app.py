@@ -247,7 +247,7 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
                 player_id = new_player(current_user.email_address)
                 join_game(player_id, game_name)
 
-        if num_of_players(game_name) < game.max_players:
+        if num_of_players(game_name) <= game.max_players:
             list = get_player_list(game_name)
             list_dict = []
             for p in list:
