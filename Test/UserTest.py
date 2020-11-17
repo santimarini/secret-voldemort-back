@@ -12,6 +12,15 @@ class UserTest(unittest.TestCase):
     send_mail = '/send_email'
     validate_email = '/validate/'
 
+    def test_send_mail(self):
+        response2 = requests.post(self.api + self.register,
+                          data='{"alias": "gonzalo", "email": "peralta.gonzalo@gmail.com", "password": "123456"}')
+        response = requests.post(self.api + self.send_mail, params={"user_email": "peralta.gonzalo@gmail.com"})
+        response3 = requests.post(self.api + self.register,
+                                  data='{"alias": "leandro", "email": "leandro.ramos@unc.edu.ar", "password": "123456"}')
+        response4 = requests.post(self.api + self.send_mail, params={"user_email": "leandro.ramos@unc.edu.ar"})
+        self.assertEqual(200,response.status_code)
+
     # TEST REGISTER ENDPOINT
     def test_new_user(self):
         response = requests.post(self.api + self.register,
