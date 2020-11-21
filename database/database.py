@@ -246,6 +246,14 @@ def get_player_list(game_name):
     list.sort(key = lambda p: p.id)
     return list
 
+@pony.orm.db_session
+def get_player_ids_list(game_name):
+    list = []
+    for p in get_game_by_name(game_name).players:
+        player = Player[p.id]
+        list.append(player.id)
+    return list
+
 #create a deck when game is starting, all cards are default "Available"
 @pony.orm.db_session
 def new_deck(game_name):
@@ -781,4 +789,9 @@ def get_last_box_used(game_name):
     else:
         return template[i-1]
 
+@pony.orm.db_session
+def delete_player_from_game(game_name,player_id):
+    g = get_game_by_name(game_name)
+    p = Player[player_id]
+    g.players.remove(p)
 

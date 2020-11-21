@@ -534,3 +534,20 @@ async def get_min_dir_elect(game_name: str):
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
 
+@app.get("/game/{game_name}/exit")
+async def exit_game(game_name: str, player_id: int):
+    if game_exists(game_name):
+        if get_game_by_name(game_name).initial_date is None:
+            if player_doesnt_exists(player_id):
+                raise HTTPException(status_code=404,
+                                    detail="player doesnt exist")
+            else:
+                if player_id in get_player_ids_list(game_name):
+                    delete_player_from_game(game_name,player_id)
+                    return {"you are not in the game anymore!"}
+        else:
+            raise HTTPException(status_code=404,
+                                detail="Game is already started")
+    else:
+        raise HTTPException(status_code=404,
+                            detail="Game is not exists")
