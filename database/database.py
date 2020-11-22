@@ -5,7 +5,6 @@ import random
 
 db = pony.orm.Database()
 
-# db.bind(provider='mysql', host='localhost', user='valentin', passwd='valentin', db='ponytest')
 db.bind(provider='sqlite', filename='database.sqlite', create_db=True)
 
 #Users table
@@ -23,8 +22,8 @@ class Player(db.Entity):
     id = PrimaryKey(int, auto=True)
     alias = Required(str)
     is_alive = Required(bool)
-    loyalty = Optional(str) #str solo para probar, aca va un ENUM (o podriamos poner un str?)
-    rol = Optional(str) #str solo para probar, aca va un ENUM (o podriamos poner un str?)
+    loyalty = Optional(str)
+    rol = Optional(str)
     user1 = Required(User)
     actualGame = Optional('Game')
 
@@ -40,7 +39,7 @@ class FinishedGames(db.Entity):
 #Games table
 class Game(db.Entity):
     name = Required(str, unique=True)
-    creation_date = Required(datetime) #datetime es un tipo de python, no de ponyorm
+    creation_date = Required(datetime)
     initial_date = Optional(datetime)
     end_date = Optional(datetime)
     max_players = Required(int)
@@ -65,6 +64,7 @@ class Turn(db.Entity):
     Pos_votes = Optional(int)
     Neg_votes = Optional(int)
     player_killed = Optional(int)
+    player_crucio = Optional(int)
 
 class Proclamation(db.Entity):
     loyalty = Required(str)

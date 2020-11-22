@@ -446,6 +446,46 @@ async def proclaim_card(card_id,game_name):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
+@app.get("/list_of_crucio")
+async def list_of_crucio(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # Get the list of live players
+    players_list = get_player_list(game_name)
+    player_before_bewitched = get_turn(get_turn_by_gamename(game_name)).player_crucio
+    list_available_players = []
+    if player_before_bewitched == None:
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1, players_list))
+    else:
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1
+                                                       and player_to_dict(x.id) != player_before_bewitched, players_list))
+    print("PLAYER BEFORE BEWITCHED")
+    print(player_before_bewitched)
+
+    list_player_dict = []
+    for p in list_available_players:
+        list_player_dict.append(player_to_dict(p.id))
+    return{"list_players": list_player_dict}
+
+@app.get("/crucio")
+async def crucio(game_name:str, player_id: int):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=400,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=400,
+                            detail="game is not started")
+    if get_turn(get_turn_by_gamename(game_name)).player_crucio == player_id:
+        raise HTTPException(status_code=401,
+                            detail="player already bewitched")
+    player_dict = player_to_dict(player_id)
+    get_turn(get_turn_by_gamename(game_name)).player_crucio = player_id
+    return{"alias": player_dict["alias"], "loyalty": player_dict["loyalty"]}
+
 @app.get("/avada_kedavra")
 async def avada_kedavra(game_name: str, victim: int):
     if (not game_exists(game_name)):
