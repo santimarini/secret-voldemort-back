@@ -447,7 +447,7 @@ async def proclaim_card(card_id,game_name):
         raise HTTPException(status_code=400,detail="inexistent game")
 
 @app.get("/list_of_crucio")
-async def list_of_crucio(game_name: str):
+async def list_of_crucio(game_name: str, player_id: int):
     if (not game_exists(game_name)):
         raise HTTPException(status_code=401,
                             detail="the game not exist")
@@ -459,13 +459,10 @@ async def list_of_crucio(game_name: str):
     player_before_bewitched = get_turn(get_turn_by_gamename(game_name)).player_crucio
     list_available_players = []
     if player_before_bewitched == None:
-        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1, players_list))
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1 and x.id != player_id, players_list))
     else:
-        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1
-                                                       and player_to_dict(x.id) != player_before_bewitched, players_list))
-    print("PLAYER BEFORE BEWITCHED")
-    print(player_before_bewitched)
-
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1 and x.id != player_id
+                                                       and x.id != player_before_bewitched, players_list))
     list_player_dict = []
     for p in list_available_players:
         list_player_dict.append(player_to_dict(p.id))
@@ -483,7 +480,7 @@ async def crucio(game_name:str, player_id: int):
         raise HTTPException(status_code=401,
                             detail="player already bewitched")
     player_dict = player_to_dict(player_id)
-    get_turn(get_turn_by_gamename(game_name)).player_crucio = player_id
+    set_player_crucio(game_name, player_id)
     return{"alias": player_dict["alias"], "loyalty": player_dict["loyalty"]}
 
 @app.get("/avada_kedavra")
