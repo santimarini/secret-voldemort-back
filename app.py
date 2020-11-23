@@ -446,6 +446,45 @@ async def proclaim_card(card_id,game_name):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
+@app.get("/caos")
+async def caos(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # la cantidad de cartas en el maso de proclamaciones no sea menor
+    if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
+        shuffle_cards(game_name)
+    # Get card
+    list_of_cards_id = get_cards_in_game(game_name)
+    cards_list = []
+    cards_list.append(card_to_dict(list_of_cards_id.pop()))
+    print("CARD LIIIIST")
+    print(cards_list[0])
+    print(cards_list[0]["id"])
+    # Proclaim and set marker
+    card_id = cards_list[0]["id"]
+    turn_id = get_turn_by_gamename(game_name)
+    marker_to_zero(turn_id)
+    proclaim(card_id)
+    box_id = get_next_box(card_id, game_name)
+    box = get_box(box_id)
+    set_used_box(box_id)
+    if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
+            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
+        set_phase_game(game_name, 5)
+        finish_game_id = end_game(game_name, box.loyalty)
+        return finished_game_to_dict(finish_game_id)
+    set_phase_game(game_name, 1)
+    # Limitations are eliminated
+    set_elect_dir(turn_id, None)
+    set_elect_min(turn_id, None)
+    return {
+        "box": box_to_dict(box_id)
+    }
+
 @app.get("/avada_kedavra")
 async def avada_kedavra(game_name: str, victim: int):
     if (not game_exists(game_name)):
