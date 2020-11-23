@@ -422,7 +422,7 @@ def get_next_player_to_min(game_name):
         else:
             return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)
     else:
-        return (imperius_minister_new)        
+        return (t.imperius_minister_new)
         
 @pony.orm.db_session
 def get_post_min(turn_id):

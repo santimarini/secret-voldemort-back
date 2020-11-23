@@ -318,6 +318,8 @@ async def finish_imperius(game_name: str):
         if game_is_not_started(game_name):
             raise HTTPException(status_code=400, detail="game is not started")
         turn_id = get_turn_by_gamename(game_name)
+        turn = get_turn(turn_id)
+        set_previous_min(turn_id,turn.imperius_minister_old)
         set_min_imperius_old_None(turn_id)
         set_min_imperius_new_None(turn_id)
         return {"imperius_finished"}    
