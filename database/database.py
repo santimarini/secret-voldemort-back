@@ -64,6 +64,8 @@ class Turn(db.Entity):
     elect_dir = Optional(int)
     Pos_votes = Optional(int)
     Neg_votes = Optional(int)
+    pos_expelliarmus = Optional(int)
+    neg_expelliarmus = Optional(int)
     player_killed = Optional(int)
 
 class Proclamation(db.Entity):
@@ -87,7 +89,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password):
     User(name=name, email_address=email_address, password=password,
-         photo="", verified=True)
+         photo="", verified=False)
 
 #given a email, returns the associate email
 @pony.orm.db_session
@@ -698,7 +700,7 @@ def assign_roles_10players(game_name):
 
 @pony.orm.db_session
 def config_boards(game_name, n_players):
-    if n_players == 5 or n_players == 6 or n_players == 2:
+    if n_players == 5 or n_players == 6:
         config_template_6players(game_name)
     if n_players == 7 or n_players == 8:
         config_template_8players(game_name)
