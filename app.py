@@ -542,3 +542,17 @@ async def get_min_dir_elect(game_name: str):
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
 
+@app.get("/game_state")
+async def get_game_state(game_name: str):
+    num_fenix_orders_proclamed = get_num_proclamations_order_fenix(game_name)
+    num_death_eaters_proclamed = get_num_proclamations_death_eaters(game_name)
+    num_proclamations_availables = num_of_cards_in_steal_stack(game_name)
+    num_proclamations_discarted = get_number_proclamations_discarted(game_name)
+    election_marker = get_election_marker(game_name)
+    return {
+        "num_fenix_orders": num_fenix_orders_proclamed,
+        "num_death_eaters": num_death_eaters_proclamed,
+        "num_proclamations_avilables": num_proclamations_availables,
+        "num_proclamations_discarted": num_proclamations_discarted,
+        "election_marker": election_marker
+    }
