@@ -454,16 +454,13 @@ async def caos(game_name: str):
     if game_is_not_started(game_name):
         raise HTTPException(status_code=401,
                             detail="game is not started")
-    # la cantidad de cartas en el maso de proclamaciones no sea menor
+    # Check the number of proclamations
     if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
         shuffle_cards(game_name)
     # Get card
     list_of_cards_id = get_cards_in_game(game_name)
     cards_list = []
     cards_list.append(card_to_dict(list_of_cards_id.pop()))
-    print("CARD LIIIIST")
-    print(cards_list[0])
-    print(cards_list[0]["id"])
     # Proclaim and set marker
     card_id = cards_list[0]["id"]
     turn_id = get_turn_by_gamename(game_name)
@@ -472,6 +469,7 @@ async def caos(game_name: str):
     box_id = get_next_box(card_id, game_name)
     box = get_box(box_id)
     set_used_box(box_id)
+    # In case the game ends
     if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
             (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
         set_phase_game(game_name, 5)

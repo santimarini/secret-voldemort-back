@@ -13,10 +13,10 @@ class UserTest(unittest.TestCase):
     validate_email = '/validate/'
 
     def test_send_mail(self):
-        response2 = requests.post(self.api + self.register,
-                          data='{"alias": "user_test_new", "email": "user_test_new@gmail.com", "password": "123456"}')
-        response = requests.post(self.api + self.send_mail, params={"user_email": "user_test_new@gmail.com"})
-        self.assertEqual(200,response.status_code)
+        response3 = requests.post(self.api + self.register,
+                                  data='{"alias": "user_zero", "email": "user_zero@gmail.com", "password": "123456"}')
+        response4 = requests.post(self.api + self.send_mail, params={"user_email": "user_zero@gmail.com"})
+        self.assertEqual(200,response4.status_code)
 
     # TEST REGISTER ENDPOINT
     def test_new_user(self):
