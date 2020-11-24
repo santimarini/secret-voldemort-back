@@ -214,11 +214,6 @@ def delete_player(player_id):
     Player[player_id].delete()
 
 @pony.orm.db_session
-def delete_all_player(game_name):
-    for player in get_game_by_name(game_name).players:
-        delete_player(player.id)
-
-@pony.orm.db_session
 def delete_all_box(game_name):
     for b in get_game_by_name(game_name).box:
         Box[b.id].delete()
@@ -767,11 +762,15 @@ def save_user_image(email,photo_link):
 @pony.orm.db_session
 def get_player_in_game_by_email(game_name,email):
     user = get_user_by_email(email)
+    print(user)
     game = get_game_by_name(game_name)
+    print(game)
     player_id = 0
     for p in user.players:
         if p.actualGame.id == game.id:
             player_id = p.id
+            break
+    print(player_id)
     return player_id
 
 
@@ -790,8 +789,21 @@ def get_last_box_used(game_name):
         return template[i-1]
 
 @pony.orm.db_session
+def is_the_creator_game(game_name, email):
+    game = get_game_by_name(game_name)
+    return game.creator == email
+
+
+@pony.orm.db_session
 def delete_player_from_game(game_name,player_id):
     g = get_game_by_name(game_name)
     p = Player[player_id]
     g.players.remove(p)
+    delete_player(player_id)
 
+@pony.orm.db_session
+def delete_all_player(game_name):
+    game = get_game_by_name(game_name)
+    for player in game.players:
+        game.players.remove(player)
+        delete_player(player.id)
