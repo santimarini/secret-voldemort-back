@@ -137,25 +137,80 @@ class GameInitTest(unittest.TestCase):
         else:
             self.assertEqual(404, response.status_code)
 
-        def test_divination(self):
-            # Start game
-            requests.post(self.api + self.start, params={"game_name": "game_init_test_7"})
-            # Init turn
-            requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_7"})
-            # Dir
-            requests.put(self.api + '/game', params={"game_name": "game_init_test_7", "dir": 22})
-            # Vote and Gob Elect
-            for i in range(5):
-                requests.put(self.api + '/game/game_init_test_7/vote',
-                             params={"game_name": "game_init_test_7", "vote": True})
-            # Get cards
-            list_of_cards_id = get_cards_in_game("game_init_test_7")
-            cards_to_proclaim = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
-            # Proclaim
-            for i in range(3):
-                proclaim(cards_to_proclaim[i])
-            response = requests.get(self.api + '/cards/draw_three_cards', params={"game_name": "game_init_test_7"})
-            self.assertEqual(200, response.status_code)
+    def test_divination(self):
+        # Start game
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_7"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_7"})
+        # Dir
+        requests.put(self.api + '/game', params={"game_name": "game_init_test_7", "dir": 22})
+        # Vote and Gob Elect
+        for i in range(5):
+            requests.put(self.api + '/game/game_init_test_7/vote',
+                         params={"game_name": "game_init_test_7", "vote": True})
+        # Get cards
+        list_of_cards_id = get_cards_in_game("game_init_test_7")
+        cards_to_proclaim = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
+        # Proclaim
+        for i in range(3):
+            proclaim(cards_to_proclaim[i])
+        response = requests.get(self.api + '/cards/draw_three_cards', params={"game_name": "game_init_test_7"})
+        self.assertEqual(200, response.status_code)
+
+    def test_crucio(self):
+        # Start game
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a1"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a1"})
+        # Get list of player
+        response0 = requests.get(self.api + '/get_players',
+                                 params={"game_name": "game_init_test_a1"})
+        resp_list0 = json.loads(response0.text)
+        # List of players for crucio
+        response1 = requests.get(self.api + '/list_of_crucio',
+                            params={"game_name": "game_init_test_a1", "player_id": resp_list0["players_list"][0]["id"]})
+        resp_list = json.loads(response1.text)
+        response2 = requests.get(self.api + '/crucio',
+                                 params={"game_name": "game_init_test_a1", "player_id": resp_list["list_players"][0]["id"]})
+        response2_dict = json.loads(response2.text)
+        if "loyalty" in response2_dict:
+            self.assertEqual(200, 200)
+        else:
+            self.assertEqual(200, response2.status_code)
+
+    def test_crucio_player_already_bewitched(self):
+        # Start game
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a2"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a2"})
+        # Get list of player
+        response0 = requests.get(self.api + '/get_players',
+                                 params={"game_name": "game_init_test_a1"})
+        resp_list0 = json.loads(response0.text)
+        # List of players for crucio
+        response1 = requests.get(self.api + '/list_of_crucio',
+                            params={"game_name": "game_init_test_a2", "player_id": resp_list0["players_list"][0]["id"]})
+        resp_list = json.loads(response1.text)
+        response2 = requests.get(self.api + '/crucio',
+                                 params={"game_name": "game_init_test_a2", "player_id": resp_list["list_players"][0]["id"]})
+        response2_dict = json.loads(response2.text)
+        if "loyalty" in response2_dict:
+            response4 = requests.get(self.api + '/crucio',
+                                     params={"game_name": "game_init_test_a2",
+                                             "player_id": resp_list["list_players"][0]["id"]})
+            self.assertEqual(401, response4.status_code)
+        else:
+            self.assertEqual(500, response2.status_code)
+
+    def test_list_crucio_game_not_exist(self):
+        response1 = requests.get(self.api + '/list_of_crucio',
+                                 params={"game_name": "never_exist", "player_id": 30})
+        self.assertEqual(401, response1.status_code)
+
+    def test_list_crucio_not_started(self):
+        response1 = requests.get(self.api + '/list_of_crucio',
+                                 params={"game_name": "game_test_new", "player_id": 30})
+        self.assertEqual(401, response1.status_code)
 
 if __name__ == '__main__':
     unittest.main()
