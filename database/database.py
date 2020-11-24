@@ -25,6 +25,7 @@ class Player(db.Entity):
     is_alive = Required(bool)
     loyalty = Optional(str) #str solo para probar, aca va un ENUM (o podriamos poner un str?)
     rol = Optional(str) #str solo para probar, aca va un ENUM (o podriamos poner un str?)
+    vote = Optional(bool)
     user1 = Required(User)
     actualGame = Optional('Game')
 
@@ -350,8 +351,10 @@ def player_to_dict(player_id):
         return None
     else:
         p = Player[player_id]
+        
         dict_p = dict(id = p.id, alias = p.alias, is_alive = p.is_alive,
-                    loyalty = p.loyalty, rol = p.rol, user1 = p.user1.email_address,
+                    loyalty = p.loyalty, rol = p.rol, vote=p.vote,
+                    user1 = p.user1.email_address,
                     actualGame = p.actualGame.name)
         return dict_p
 
@@ -632,19 +635,6 @@ def set_user_verified(user_email):
 list_roles_death_eaters = ["Voldemort", "Bellatrix", "Draco", "Dolores Umbridge"]
 list_roles_fenix_order = ["Harry Potter", "Hermione", "Ronald", "Dumbledore", "Sirius Black", "Hagrid"]
 
-
-
-@pony.orm.db_session
-def assign_roles_2players(game_name):
-    player_list = get_player_list(game_name)
-    random.shuffle(player_list)
-    player_list[0].loyalty = "Death Eaters"
-    player_list[0].rol = "Draco"
-    player_list[1].loyalty = "Fenix Order"
-    player_list[1].rol = "Harry Potter"
-
-
-
 @pony.orm.db_session
 def assign_roles_6players(game_name):
     player_list = get_player_list(game_name)
@@ -698,7 +688,7 @@ def assign_roles_10players(game_name):
 
 @pony.orm.db_session
 def config_boards(game_name, n_players):
-    if n_players == 5 or n_players == 6 or n_players == 2:
+    if n_players == 5 or n_players == 6:
         config_template_6players(game_name)
     if n_players == 7 or n_players == 8:
         config_template_8players(game_name)
@@ -707,8 +697,6 @@ def config_boards(game_name, n_players):
 
 @pony.orm.db_session
 def assing_loyalty_and_rol(game_name, n_players):
-    if n_players == 2:
-        assign_roles_2players(game_name)
     if n_players == 5 or n_players == 6:
         assign_roles_6players(game_name)
     if n_players == 7 or n_players == 8:
@@ -766,6 +754,15 @@ def get_player_in_game_by_email(game_name,email):
             player_id = p.id
     return player_id
 
+@pony.orm.db_session
+def set_vote_player(player_id: int, vote: Optional(bool)):
+    Player[player_id].vote = vote
+
+@pony.orm.db_session
+def reset_votes_players(game_name):
+    game = get_game_by_name(game_name)
+    for p in game.players:
+        p.vote = None
 
 @pony.orm.db_session
 def get_last_box_used(game_name):
