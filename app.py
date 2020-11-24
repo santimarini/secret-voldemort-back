@@ -273,6 +273,9 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
 async def start_game(game_name: str):
     if  get_game_by_name(game_name) is None:
         raise HTTPException(status_code=404, detail="The game is not exist")
+    if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
+        raise HTTPException(status_code=403,
+                            detail="There aren't enough players")
     set_game_started(game_name)
     set_phase_game(game_name,1)
     new_turn(game_name)
@@ -300,6 +303,7 @@ async def next_turn_begin(game_name: str):
         turn = get_turn(turn_id)
         next_id_min = get_next_player_to_min(game_name, turn.previous_min)
         set_post_min(turn_id, next_id_min)
+        reset_votes_players(game_name)
         player_min = player_to_dict(next_id_min)
         if num_of_players_alive(game_name) > MIN_NUM_OF_PLAYERS:
             list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
@@ -334,11 +338,15 @@ async def dir_post(game_name: str, dir: int):
         raise HTTPException(status_code=400, detail="inexistent game")
 
 @app.put("/game/{game_name}/vote")
-async def vote_player(game_name: str, vote: bool):
+async def vote_player(game_name: str, vote: bool,
+                      current_user: User = Depends(get_current_verified_user)):
+    player_id = get_player_in_game_by_email(game_name, current_user.email_address)
     turn_id = get_turn_by_gamename(game_name)
     if vote:
+        set_vote_player(player_id, True)
         increment_pos_votes(turn_id)
     else:
+        set_vote_player(player_id, False)
         increment_neg_votes(turn_id)
     if num_of_players_alive(game_name) == get_total_votes(turn_id):
         if get_status_vote(turn_id):
@@ -446,6 +454,7 @@ async def proclaim_card(card_id,game_name):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
+
 @app.get("/caos")
 async def caos(game_name: str):
     if (not game_exists(game_name)):
@@ -461,10 +470,9 @@ async def caos(game_name: str):
     list_of_cards_id = get_cards_in_game(game_name)
     cards_list = []
     cards_list.append(card_to_dict(list_of_cards_id.pop()))
-    # Proclaim and set marker
+    # Proclaim
     card_id = cards_list[0]["id"]
     turn_id = get_turn_by_gamename(game_name)
-    marker_to_zero(turn_id)
     proclaim(card_id)
     box_id = get_next_box(card_id, game_name)
     box = get_box(box_id)
@@ -482,6 +490,43 @@ async def caos(game_name: str):
     return {
         "box": box_to_dict(box_id)
     }
+
+@app.get("/list_of_crucio")
+async def list_of_crucio(game_name: str, player_id: int):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # Get the list of live players
+    players_list = get_player_list(game_name)
+    player_before_bewitched = get_turn(get_turn_by_gamename(game_name)).player_crucio
+    list_available_players = []
+    if player_before_bewitched == None:
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1 and x.id != player_id, players_list))
+    else:
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1 and x.id != player_id
+                                                       and x.id != player_before_bewitched, players_list))
+    list_player_dict = []
+    for p in list_available_players:
+        list_player_dict.append(player_to_dict(p.id))
+    return{"list_players": list_player_dict}
+
+@app.get("/crucio")
+async def crucio(game_name:str, player_id: int):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=400,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=400,
+                            detail="game is not started")
+    if get_turn(get_turn_by_gamename(game_name)).player_crucio == player_id:
+        raise HTTPException(status_code=401,
+                            detail="player already bewitched")
+    player_dict = player_to_dict(player_id)
+    set_player_crucio(game_name, player_id)
+    return{"alias": player_dict["alias"], "loyalty": player_dict["loyalty"]}
 
 @app.get("/avada_kedavra")
 async def avada_kedavra(game_name: str, victim: int):
