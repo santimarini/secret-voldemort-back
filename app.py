@@ -273,6 +273,9 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
 async def start_game(game_name: str):
     if  get_game_by_name(game_name) is None:
         raise HTTPException(status_code=404, detail="The game is not exist")
+    if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
+        raise HTTPException(status_code=403,
+                            detail="There aren't enough players")
     set_game_started(game_name)
     set_phase_game(game_name,1)
     new_turn(game_name)
@@ -300,6 +303,7 @@ async def next_turn_begin(game_name: str):
         turn = get_turn(turn_id)
         next_id_min = get_next_player_to_min(game_name, turn.previous_min)
         set_post_min(turn_id, next_id_min)
+        reset_votes_players(game_name)
         player_min = player_to_dict(next_id_min)
         if num_of_players_alive(game_name) > MIN_NUM_OF_PLAYERS:
             list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
@@ -334,11 +338,15 @@ async def dir_post(game_name: str, dir: int):
         raise HTTPException(status_code=400, detail="inexistent game")
 
 @app.put("/game/{game_name}/vote")
-async def vote_player(game_name: str, vote: bool):
+async def vote_player(game_name: str, vote: bool,
+                      current_user: User = Depends(get_current_verified_user)):
+    player_id = get_player_in_game_by_email(game_name, current_user.email_address)
     turn_id = get_turn_by_gamename(game_name)
     if vote:
+        set_vote_player(player_id, True)
         increment_pos_votes(turn_id)
     else:
+        set_vote_player(player_id, False)
         increment_neg_votes(turn_id)
     if num_of_players_alive(game_name) == get_total_votes(turn_id):
         if get_status_vote(turn_id):
