@@ -550,6 +550,37 @@ async def avada_kedavra(game_name: str, victim: int):
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
 
+@app.put("/expelliarmus")
+async def expelliarmus(game_name: str, vote: bool):
+    set_phase_game(game_name, 7)
+    turn_id = get_turn_by_gamename(game_name)
+    if vote:
+        increment_pos_votes(turn_id)
+    else:
+        increment_neg_votes(turn_id)
+    if get_total_votes(turn_id) == 2:
+        if get_status_vote(turn_id):
+            increment_marker(turn_id)
+            set_vote_to_zero(turn_id)
+            list_of_cards_id = get_cards_in_game(game_name)
+            cards_list = []
+            for c in range(2):
+                cards_list.append(card_to_dict(list_of_cards_id.pop()))
+            increment_marker(turn_id)
+            discard(cards_list[0]["id"])
+            discard(cards_list[1]["id"])
+            set_phase_game(game_name, 1)
+            return {"Se descartaron las cartas"}
+        else:
+            set_vote_to_zero(turn_id)
+            set_phase_game(game_name, 3)
+            return {"No se produjo expelliarmus"}
+    else:
+        return {"Se voto un expelliarmus tiene que decidir el ministro"}
+
+
+
+
 @app.get("/game_is_started")
 async def game_is_started(game_name: str):
     if not game_is_not_started(game_name):
