@@ -273,6 +273,9 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
 async def start_game(game_name: str):
     if  get_game_by_name(game_name) is None:
         raise HTTPException(status_code=404, detail="The game is not exist")
+    if num_of_players(game_name) < MIN_NUM_OF_PLAYERS:
+        raise HTTPException(status_code=403,
+                            detail="There aren't enough players")
     set_game_started(game_name)
     set_phase_game(game_name,1)
     new_turn(game_name)
@@ -298,6 +301,7 @@ async def next_turn_begin(game_name: str):
         turn_id = get_turn_by_gamename(game_name)
         next_turn(turn_id)
         turn = get_turn(turn_id)
+        reset_votes_players(game_name)
         if num_of_players_alive(game_name) > MIN_NUM_OF_PLAYERS:
             list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
             list_player_dict = []
@@ -372,11 +376,15 @@ async def dir_post(game_name: str, dir: int):
         raise HTTPException(status_code=400, detail="inexistent game")
 
 @app.put("/game/{game_name}/vote")
-async def vote_player(game_name: str, vote: bool):
+async def vote_player(game_name: str, vote: bool,
+                      current_user: User = Depends(get_current_verified_user)):
+    player_id = get_player_in_game_by_email(game_name, current_user.email_address)
     turn_id = get_turn_by_gamename(game_name)
     if vote:
+        set_vote_player(player_id, True)
         increment_pos_votes(turn_id)
     else:
+        set_vote_player(player_id, False)
         increment_neg_votes(turn_id)
     if num_of_players_alive(game_name) == get_total_votes(turn_id):
         if get_status_vote(turn_id):
@@ -484,6 +492,80 @@ async def proclaim_card(card_id,game_name):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
+
+@app.get("/caos")
+async def caos(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # Check the number of proclamations
+    if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
+        shuffle_cards(game_name)
+    # Get card
+    list_of_cards_id = get_cards_in_game(game_name)
+    cards_list = []
+    cards_list.append(card_to_dict(list_of_cards_id.pop()))
+    # Proclaim
+    card_id = cards_list[0]["id"]
+    turn_id = get_turn_by_gamename(game_name)
+    proclaim(card_id)
+    box_id = get_next_box(card_id, game_name)
+    box = get_box(box_id)
+    set_used_box(box_id)
+    # In case the game ends
+    if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
+            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
+        set_phase_game(game_name, 5)
+        finish_game_id = end_game(game_name, box.loyalty)
+        return finished_game_to_dict(finish_game_id)
+    set_phase_game(game_name, 1)
+    # Limitations are eliminated
+    set_elect_dir(turn_id, None)
+    set_elect_min(turn_id, None)
+    return {
+        "box": box_to_dict(box_id)
+    }
+
+@app.get("/list_of_crucio")
+async def list_of_crucio(game_name: str, player_id: int):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # Get the list of live players
+    players_list = get_player_list(game_name)
+    player_before_bewitched = get_turn(get_turn_by_gamename(game_name)).player_crucio
+    list_available_players = []
+    if player_before_bewitched == None:
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1 and x.id != player_id, players_list))
+    else:
+        list_available_players = list(filter(lambda x: player_to_dict(x.id)["is_alive"] == 1 and x.id != player_id
+                                                       and x.id != player_before_bewitched, players_list))
+    list_player_dict = []
+    for p in list_available_players:
+        list_player_dict.append(player_to_dict(p.id))
+    return{"list_players": list_player_dict}
+
+@app.get("/crucio")
+async def crucio(game_name:str, player_id: int):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=400,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=400,
+                            detail="game is not started")
+    if get_turn(get_turn_by_gamename(game_name)).player_crucio == player_id:
+        raise HTTPException(status_code=401,
+                            detail="player already bewitched")
+    player_dict = player_to_dict(player_id)
+    set_player_crucio(game_name, player_id)
+    return{"alias": player_dict["alias"], "loyalty": player_dict["loyalty"]}
+
 @app.get("/avada_kedavra")
 async def avada_kedavra(game_name: str, victim: int):
     if (not game_exists(game_name)):
@@ -500,11 +582,45 @@ async def avada_kedavra(game_name: str, victim: int):
         raise HTTPException(status_code=401,
                             detail="This player already death")
     update_player_alive(victim)
+    turn_id = get_turn_by_gamename(game_name)
+    set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
         set_phase_game(game_name, 5)
+        return {"player_murdered": player_dict}
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
+
+@app.put("/expelliarmus")
+async def expelliarmus(game_name: str, vote: bool):
+    set_phase_game(game_name, 7)
+    turn_id = get_turn_by_gamename(game_name)
+    if vote:
+        increment_pos_votes(turn_id)
+    else:
+        increment_neg_votes(turn_id)
+    if get_total_votes(turn_id) == 2:
+        if get_status_vote(turn_id):
+            increment_marker(turn_id)
+            set_vote_to_zero(turn_id)
+            list_of_cards_id = get_cards_in_game(game_name)
+            cards_list = []
+            for c in range(2):
+                cards_list.append(card_to_dict(list_of_cards_id.pop()))
+            increment_marker(turn_id)
+            discard(cards_list[0]["id"])
+            discard(cards_list[1]["id"])
+            set_phase_game(game_name, 1)
+            return {"Se descartaron las cartas"}
+        else:
+            set_vote_to_zero(turn_id)
+            set_phase_game(game_name, 3)
+            return {"No se produjo expelliarmus"}
+    else:
+        return {"Se voto un expelliarmus tiene que decidir el ministro"}
+
+
+
 
 @app.get("/game_is_started")
 async def game_is_started(game_name: str):
@@ -571,4 +687,37 @@ async def get_min_dir_elect(game_name: str):
                 "elect_dir": player_dir}
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
+
+
+@app.get("/game_state")
+async def get_game_state(game_name: str):
+    num_fenix_orders_proclamed = get_num_proclamations_order_fenix(game_name)
+    num_death_eaters_proclamed = get_num_proclamations_death_eaters(game_name)
+    num_proclamations_availables = num_of_cards_in_steal_stack(game_name)
+    num_proclamations_discarted = get_number_proclamations_discarted(game_name)
+    election_marker = get_election_marker(game_name)
+    return {
+        "num_fenix_orders": num_fenix_orders_proclamed,
+        "num_death_eaters": num_death_eaters_proclamed,
+        "num_proclamations_avilables": num_proclamations_availables,
+        "num_proclamations_discarted": num_proclamations_discarted,
+        "election_marker": election_marker
+    }
+
+@app.get("/game/{game_name}/exit")
+async def exit_game(game_name: str, current_user: User = Depends(get_current_user)):
+    if game_exists(game_name):
+        if get_game_by_name(game_name).initial_date is None:
+            player_id = get_player_in_game_by_email(game_name,current_user.email_address)
+            if is_the_creator_game(game_name,current_user.email_address):
+                delete_all_player(game_name)
+                set_phase_game(game_name,5)
+            else:
+                delete_player_from_game(game_name,player_id)
+        else:
+            raise HTTPException(status_code=404,
+                                detail="Game is already started")
+    else:
+        raise HTTPException(status_code=404,
+                            detail="Game is not exists")
 
