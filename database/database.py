@@ -442,7 +442,12 @@ def marker_to_zero(turn_id):
 
 
 @pony.orm.db_session
-def set_previous_min(turn_id, player_id):
+def get_election_marker(game_name):
+    game = get_game_by_name(game_name)
+    return game.turn.elect_marker
+
+@pony.orm.db_session
+def set_previous_min(turn_id,player_id):
     Turn[turn_id].previous_min = player_id
 
 
@@ -592,12 +597,12 @@ def get_template_death_e(game_name):
 
 @pony.orm.db_session
 def get_template_order_f(game_name):
-    template_de = []
+    template_fo = []
     for i in get_game_by_name(game_name).box:
         if i.loyalty == "Fenix Order":
-            template_de.append(i)
-    template_de.sort(key=lambda p: p.position)
-    return template_de
+            template_fo.append(i)
+    template_fo.sort(key=lambda p: p.position)
+    return template_fo
 
 
 @pony.orm.db_session
@@ -900,6 +905,33 @@ def delete_player_from_game(game_name,player_id):
     delete_player(player_id)
 
 @pony.orm.db_session
+def get_number_proclamations_discarted(game_name):
+    game = get_game_by_name(game_name)
+    n = 0
+    for p in game.proclamation:
+        if p.deck == "Discarded":
+            n += 1
+    return n
+
+@pony.orm.db_session
+def get_num_proclamations_order_fenix(game_name):
+    template_fo = get_template_order_f(game_name)
+    n = 0
+    for b in template_fo:
+        if b.is_used:
+            n += 1
+    return n
+
+@pony.orm.db_session
+def get_num_proclamations_death_eaters(game_name):
+    template_de = get_template_death_e(game_name)
+    n = 0
+    for b in template_de:
+        if b.is_used:
+            n += 1
+    return n
+
+@pony.orm.db_session
 def delete_all_player(game_name):
     game = get_game_by_name(game_name)
     for player in game.players:
@@ -909,3 +941,4 @@ def delete_all_player(game_name):
 @pony.orm.db_session
 def set_player_crucio(game_name, player_id):
     get_turn(get_turn_by_gamename(game_name)).player_crucio = player_id
+
