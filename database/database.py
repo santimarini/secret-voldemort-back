@@ -72,8 +72,9 @@ class Turn(db.Entity):
     pos_expelliarmus = Optional(int)
     neg_expelliarmus = Optional(int)
     player_killed = Optional(int)
+    imperius_minister_old = Optional(int)
+    imperius_minister_new = Optional(int)
     player_crucio = Optional(int)
-
 
 class Proclamation(db.Entity):
     loyalty = Required(str)
@@ -482,15 +483,20 @@ def get_turn(turn_id):
 
 
 @pony.orm.db_session
-def get_next_player_to_min(game_name, last_min):
-    list_player_alive = list(filter(lambda p: p.is_alive, get_player_list(game_name)))
-    n = len(list_player_alive)
-    if last_min is None or (list_player_alive.index(Player[last_min]) == n - 1):
-        return list_player_alive[0].id
+def get_next_player_to_min(game_name):
+    t_id = get_turn_by_gamename(game_name)
+    t = get_turn(t_id)
+    if (t.imperius_minister_old == None) and (t.imperius_minister_new == None):
+        last_min = t.previous_min
+        list_player_alive = list(filter(lambda p: p.is_alive, get_player_list(game_name)))
+        n = len(list_player_alive)
+        if last_min is None or (list_player_alive.index(Player[last_min]) == n-1):
+            return list_player_alive[0].id
+        else:
+            return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)
     else:
-        return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)
-
-
+        return (t.imperius_minister_new)
+        
 @pony.orm.db_session
 def get_post_min(turn_id):
     return Turn[turn_id].post_min
@@ -892,6 +898,21 @@ def get_last_box_used(game_name):
         return template[i-1]
 
 @pony.orm.db_session
+def set_min_imperius_old(turn_id: int,old_min_id: int):
+    t = get_turn(turn_id)
+    t.imperius_minister_old = old_min_id
+
+@pony.orm.db_session
+def set_min_imperius_new(turn_id: int,new_min_id: int):
+    t = get_turn(turn_id)
+    t.imperius_minister_new = new_min_id
+
+@pony.orm.db_session
+def set_min_imperius_new_None(turn_id: int):
+    t = get_turn(turn_id)
+    t.imperius_minister_new = None
+
+@pony.orm.db_session
 def is_the_creator_game(game_name, email):
     game = get_game_by_name(game_name)
     return game.creator == email
@@ -942,3 +963,7 @@ def delete_all_player(game_name):
 def set_player_crucio(game_name, player_id):
     get_turn(get_turn_by_gamename(game_name)).player_crucio = player_id
 
+@pony.orm.db_session
+def set_min_imperius_old_None(turn_id: int):
+    t = get_turn(turn_id)
+    t.imperius_minister_old = None

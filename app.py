@@ -301,10 +301,7 @@ async def next_turn_begin(game_name: str):
         turn_id = get_turn_by_gamename(game_name)
         next_turn(turn_id)
         turn = get_turn(turn_id)
-        next_id_min = get_next_player_to_min(game_name, turn.previous_min)
-        set_post_min(turn_id, next_id_min)
         reset_votes_players(game_name)
-        player_min = player_to_dict(next_id_min)
         if num_of_players_alive(game_name) > MIN_NUM_OF_PLAYERS:
             list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
             list_player_dict = []
@@ -315,10 +312,51 @@ async def next_turn_begin(game_name: str):
             list_player_dict = []
             for p in list_player:
                 list_player_dict.append(player_to_dict(p.id))
-        return {"minister": player_min,
-                "players": list_player_dict}
+        return {"players": list_player_dict}
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
+
+@app.post("/finish_imperius")
+async def finish_imperius(game_name: str):
+    if game_exists(game_name):
+        if game_is_not_started(game_name):
+            raise HTTPException(status_code=400, detail="game is not started")
+        turn_id = get_turn_by_gamename(game_name)
+        turn = get_turn(turn_id)
+        set_previous_min(turn_id,turn.imperius_minister_old)
+        set_min_imperius_old_None(turn_id)
+        set_min_imperius_new_None(turn_id)
+        return {"imperius_finished"}    
+    else:
+        raise HTTPException(status_code=400,detail="inexistent game")        
+    
+@app.post("/imperius")
+async def imperius(game_name: str, new_min_id: int, old_min_id: int):
+    if game_exists(game_name):
+        if game_is_not_started(game_name):
+            raise HTTPException(status_code=400, detail="game is not started")
+        turn_id = get_turn_by_gamename(game_name)
+        turn = get_turn(turn_id)
+        if player_doesnt_exists(new_min_id) or player_doesnt_exists(old_min_id):
+            raise HTTPException(status_code=400, detail="new minister or old minister doesnt exists")
+        set_min_imperius_old(turn_id,old_min_id)
+        set_min_imperius_new(turn_id,new_min_id)
+        return {"ministers seted correctly"}    
+    else:
+        raise HTTPException(status_code=400,detail="inexistent game")        
+    
+@app.post("/set_minister")
+async def select_post_min(game_name: str):
+    if game_exists(game_name):
+        if game_is_not_started(game_name):
+            raise HTTPException(status_code=400, detail="game is not started")
+        turn_id = get_turn_by_gamename(game_name)
+        next_id_min = get_next_player_to_min(game_name) #modificar esta funcion para que incluya el caso imperius.
+        set_post_min(turn_id, next_id_min)
+        player_min = player_to_dict(next_id_min)
+        return{"minister" : player_min}
+    else:
+        raise HTTPException(status_code=400,detail="inexistent game")        
 
 @app.put("/game")
 async def dir_post(game_name: str, dir: int):
@@ -544,8 +582,11 @@ async def avada_kedavra(game_name: str, victim: int):
         raise HTTPException(status_code=401,
                             detail="This player already death")
     update_player_alive(victim)
+    turn_id = get_turn_by_gamename(game_name)
+    set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
         set_phase_game(game_name, 5)
+        return {"player_murdered": player_dict}
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
