@@ -725,16 +725,6 @@ def end_game(game_name, loyalty):
     return finish_game_id
 
 @pony.orm.db_session
-def end_game_voldemort_director(game_name):
-    set_end_date(game_name)
-    finish_game_id = new_finished_game(game_name, "Death Eaters")
-    delete_all_box(game_name)
-    delete_all_proclamation(game_name)
-    delete_all_player(game_name)
-    delete_turn(game_name)
-    return finish_game_id
-
-@pony.orm.db_session
 def is_card_discard(card_id):
     card = Proclamation[card_id]
     return (card.deck == "Discarded")
@@ -981,7 +971,7 @@ def set_min_imperius_old_None(turn_id: int):
 @pony.orm.db_session
 def voldemort_is_director(turn_id):
     turn = Turn[turn_id]
-    player = Player[turn.elect_dir]
+    player = Player[turn.post_dir]
     return player.rol == "Voldemort"
 
 @pony.orm.db_session

@@ -27,6 +27,9 @@ app = FastAPI(
 
 origins = [
     "http://localhost:3000",
+    "http://*:3000",
+    "*",
+    "http://*:*"
 ]
 
 app.add_middleware(
@@ -268,14 +271,16 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
         raise HTTPException(status_code=404,
                             detail="Game is not exists")
 
-@app.get("/game/{game_name}/exit")
+@app.get("/exit_game")
 async def exit_game(game_name: str, current_user: User = Depends(get_current_user)):
     if game_exists(game_name):
         if get_game_by_name(game_name).initial_date is None:
             player_id = get_player_in_game_by_email(game_name,current_user.email_address)
             if is_the_creator_game(game_name,current_user.email_address):
                 delete_all_player(game_name)
+                finish_game_id = end_game(game_name, "")
                 set_phase_game(game_name,5)
+                return finished_game_to_dict(finish_game_id)
             else:
                 delete_player_from_game(game_name,player_id)
         else:
@@ -381,8 +386,8 @@ async def vote_player(game_name: str, vote: bool,
             if voldemort_is_director(turn_id) and \
             get_num_proclamations_death_eaters(game_name) >= 3:
                 set_phase_game(game_name,5)
-                finish_game_id = end_game_voldemort_director(game_name)
-                return {finished_game_to_dict(finish_game_id)}
+                finish_game_id = end_game(game_name, "Death Eaters")
+                return finished_game_to_dict(finish_game_id)
             set_phase_game(game_name,3)
             reset_votes_players(game_name)
             set_elect_min(turn_id, get_post_min(turn_id))
@@ -544,8 +549,10 @@ async def avada_kedavra(game_name: str, victim: int):
     turn_id = get_turn_by_gamename(game_name)
     set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
+        finish_game_id = end_game(game_name, "Fenix Order")
         set_phase_game(game_name, 5)
-        return {"player_murdered": player_dict}
+        return {"player_murdered": player_dict,
+                "finish_game": finished_game_to_dict(finish_game_id)}
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
