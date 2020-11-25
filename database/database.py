@@ -100,7 +100,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password):
     User(name=name, email_address=email_address, password=password,
-         photo="", verified=False)
+         photo="", verified=True)
 
 
 # given a email, returns the associate email
@@ -575,7 +575,8 @@ def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
 @pony.orm.db_session
 def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
     turn = get_turn(turn_id)
-    list_a = filter(lambda p: p.is_alive and turn.post_min != p.id,
+    list_a = filter(lambda p: p.is_alive and turn.post_min != p.id and
+                            p.id != turn.elect_dir,
                     get_player_list(game_name))
     return (list(list_a))
 
@@ -723,6 +724,15 @@ def end_game(game_name, loyalty):
     delete_turn(game_name)
     return finish_game_id
 
+@pony.orm.db_session
+def end_game_voldemort_director(game_name):
+    set_end_date(game_name)
+    finish_game_id = new_finished_game(game_name, "Death Eaters")
+    delete_all_box(game_name)
+    delete_all_proclamation(game_name)
+    delete_all_player(game_name)
+    delete_turn(game_name)
+    return finish_game_id
 
 @pony.orm.db_session
 def is_card_discard(card_id):
@@ -967,3 +977,14 @@ def set_player_crucio(game_name, player_id):
 def set_min_imperius_old_None(turn_id: int):
     t = get_turn(turn_id)
     t.imperius_minister_old = None
+
+@pony.orm.db_session
+def voldemort_is_director(turn_id):
+    turn = Turn[turn_id]
+    player = Player[turn.elect_dir]
+    return player.rol == "Voldemort"
+
+@pony.orm.db_session
+def player_already_vote(player_id):
+    player = Player[player_id]
+    return player.vote is not None
