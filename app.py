@@ -266,8 +266,25 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
                                 )
     else:
         raise HTTPException(status_code=404,
-                            detail="Game is not exists"
-                            )
+                            detail="Game is not exists")
+
+@app.get("/game/{game_name}/exit")
+async def exit_game(game_name: str, current_user: User = Depends(get_current_user)):
+    if game_exists(game_name):
+        if get_game_by_name(game_name).initial_date is None:
+            player_id = get_player_in_game_by_email(game_name,current_user.email_address)
+            if is_the_creator_game(game_name,current_user.email_address):
+                delete_all_player(game_name)
+                set_phase_game(game_name,5)
+            else:
+                delete_player_from_game(game_name,player_id)
+        else:
+            raise HTTPException(status_code=404,
+                                detail="Game is already started")
+    else:
+        raise HTTPException(status_code=404,
+                            detail="Game is not exists")
+
 
 @app.post("/start")
 async def start_game(game_name: str):
@@ -293,6 +310,19 @@ async def start_game(game_name: str):
         "players": player_dict
     }
 
+@app.post("/set_minister")
+async def select_post_min(game_name: str):
+    if game_exists(game_name):
+        if game_is_not_started(game_name):
+            raise HTTPException(status_code=400, detail="game is not started")
+        turn_id = get_turn_by_gamename(game_name)
+        next_id_min = get_next_player_to_min(game_name) #modificar esta funcion para que incluya el caso imperius.
+        set_post_min(turn_id, next_id_min)
+        player_min = player_to_dict(next_id_min)
+        return{"minister" : player_min}
+    else:
+        raise HTTPException(status_code=400,detail="inexistent game")
+
 @app.post("/next_turn")
 async def next_turn_begin(game_name: str):
     if game_exists(game_name):
@@ -316,47 +346,6 @@ async def next_turn_begin(game_name: str):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
-@app.post("/finish_imperius")
-async def finish_imperius(game_name: str):
-    if game_exists(game_name):
-        if game_is_not_started(game_name):
-            raise HTTPException(status_code=400, detail="game is not started")
-        turn_id = get_turn_by_gamename(game_name)
-        turn = get_turn(turn_id)
-        set_previous_min(turn_id,turn.imperius_minister_old)
-        set_min_imperius_old_None(turn_id)
-        set_min_imperius_new_None(turn_id)
-        return {"imperius_finished"}    
-    else:
-        raise HTTPException(status_code=400,detail="inexistent game")        
-    
-@app.post("/imperius")
-async def imperius(game_name: str, new_min_id: int, old_min_id: int):
-    if game_exists(game_name):
-        if game_is_not_started(game_name):
-            raise HTTPException(status_code=400, detail="game is not started")
-        turn_id = get_turn_by_gamename(game_name)
-        turn = get_turn(turn_id)
-        if player_doesnt_exists(new_min_id) or player_doesnt_exists(old_min_id):
-            raise HTTPException(status_code=400, detail="new minister or old minister doesnt exists")
-        set_min_imperius_old(turn_id,old_min_id)
-        set_min_imperius_new(turn_id,new_min_id)
-        return {"ministers seted correctly"}    
-    else:
-        raise HTTPException(status_code=400,detail="inexistent game")        
-    
-@app.post("/set_minister")
-async def select_post_min(game_name: str):
-    if game_exists(game_name):
-        if game_is_not_started(game_name):
-            raise HTTPException(status_code=400, detail="game is not started")
-        turn_id = get_turn_by_gamename(game_name)
-        next_id_min = get_next_player_to_min(game_name) #modificar esta funcion para que incluya el caso imperius.
-        set_post_min(turn_id, next_id_min)
-        player_min = player_to_dict(next_id_min)
-        return{"minister" : player_min}
-    else:
-        raise HTTPException(status_code=400,detail="inexistent game")        
 
 @app.put("/game")
 async def dir_post(game_name: str, dir: int):
@@ -492,43 +481,6 @@ async def proclaim_card(card_id,game_name):
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
 
-
-@app.get("/caos")
-async def caos(game_name: str):
-    if (not game_exists(game_name)):
-        raise HTTPException(status_code=401,
-                            detail="the game not exist")
-    if game_is_not_started(game_name):
-        raise HTTPException(status_code=401,
-                            detail="game is not started")
-    # Check the number of proclamations
-    if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
-        shuffle_cards(game_name)
-    # Get card
-    list_of_cards_id = get_cards_in_game(game_name)
-    cards_list = []
-    cards_list.append(card_to_dict(list_of_cards_id.pop()))
-    # Proclaim
-    card_id = cards_list[0]["id"]
-    turn_id = get_turn_by_gamename(game_name)
-    proclaim(card_id)
-    box_id = get_next_box(card_id, game_name)
-    box = get_box(box_id)
-    set_used_box(box_id)
-    # In case the game ends
-    if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
-            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
-        set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, box.loyalty)
-        return finished_game_to_dict(finish_game_id)
-    set_phase_game(game_name, 1)
-    # Limitations are eliminated
-    set_elect_dir(turn_id, None)
-    set_elect_min(turn_id, None)
-    return {
-        "box": box_to_dict(box_id)
-    }
-
 @app.get("/list_of_crucio")
 async def list_of_crucio(game_name: str, player_id: int):
     if (not game_exists(game_name)):
@@ -591,6 +543,36 @@ async def avada_kedavra(game_name: str, victim: int):
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
 
+@app.post("/imperius")
+async def imperius(game_name: str, new_min_id: int, old_min_id: int):
+    if game_exists(game_name):
+        if game_is_not_started(game_name):
+            raise HTTPException(status_code=400, detail="game is not started")
+        turn_id = get_turn_by_gamename(game_name)
+        turn = get_turn(turn_id)
+        if player_doesnt_exists(new_min_id) or player_doesnt_exists(old_min_id):
+            raise HTTPException(status_code=400, detail="new minister or old minister doesnt exists")
+        set_min_imperius_old(turn_id, old_min_id)
+        set_min_imperius_new(turn_id, new_min_id)
+        return {"ministers seted correctly"}
+    else:
+        raise HTTPException(status_code=400, detail="inexistent game")
+
+
+@app.post("/finish_imperius")
+async def finish_imperius(game_name: str):
+    if game_exists(game_name):
+        if game_is_not_started(game_name):
+            raise HTTPException(status_code=400, detail="game is not started")
+        turn_id = get_turn_by_gamename(game_name)
+        turn = get_turn(turn_id)
+        set_previous_min(turn_id, turn.imperius_minister_old)
+        set_min_imperius_old_None(turn_id)
+        set_min_imperius_new_None(turn_id)
+        return {"imperius_finished"}
+    else:
+        raise HTTPException(status_code=400, detail="inexistent game")
+
 @app.put("/expelliarmus")
 async def expelliarmus(game_name: str, vote: bool):
     set_phase_game(game_name, 7)
@@ -620,6 +602,57 @@ async def expelliarmus(game_name: str, vote: bool):
         return {"Se voto un expelliarmus tiene que decidir el ministro"}
 
 
+@app.get("/caos")
+async def caos(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # Check the number of proclamations
+    if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
+        shuffle_cards(game_name)
+    # Get card
+    list_of_cards_id = get_cards_in_game(game_name)
+    cards_list = []
+    cards_list.append(card_to_dict(list_of_cards_id.pop()))
+    # Proclaim
+    card_id = cards_list[0]["id"]
+    turn_id = get_turn_by_gamename(game_name)
+    proclaim(card_id)
+    box_id = get_next_box(card_id, game_name)
+    box = get_box(box_id)
+    set_used_box(box_id)
+    # In case the game ends
+    if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
+            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
+        set_phase_game(game_name, 5)
+        finish_game_id = end_game(game_name, box.loyalty)
+        return finished_game_to_dict(finish_game_id)
+    set_phase_game(game_name, 1)
+    # Limitations are eliminated
+    set_elect_dir(turn_id, None)
+    set_elect_min(turn_id, None)
+    return {
+        "box": box_to_dict(box_id)
+    }
+
+@app.get("/game_state")
+async def get_game_state(game_name: str):
+    num_fenix_orders_proclamed = get_num_proclamations_order_fenix(game_name)
+    num_death_eaters_proclamed = get_num_proclamations_death_eaters(game_name)
+    num_proclamations_availables = num_of_cards_in_steal_stack(game_name)
+    num_proclamations_discarted = get_number_proclamations_discarted(game_name)
+    election_marker = get_election_marker(game_name)
+    return {
+        "num_fenix_orders": num_fenix_orders_proclamed,
+        "num_death_eaters": num_death_eaters_proclamed,
+        "num_proclamations_avilables": num_proclamations_availables,
+        "num_proclamations_discarted": num_proclamations_discarted,
+        "election_marker": election_marker
+    }
+
 
 
 @app.get("/game_is_started")
@@ -630,7 +663,7 @@ async def game_is_started(game_name: str):
         return {"status": 'not started'}
 
 @app.get("/postulated")
-async def get_two(game_name: str):
+async def get_two_postulateds(game_name: str):
     turn_id = get_turn_by_gamename(game_name)
     post_min_id = get_post_min(turn_id)
     post_dir_id = get_post_dir(turn_id)
@@ -640,10 +673,6 @@ async def get_two(game_name: str):
         "post_director": post_dir,
         "post_minister": post_min
     }
-
-@app.post("/phase")
-async def set_phase(game_name: str, phase: int):
-    set_phase_game(game_name, phase)
 
 @app.get("/phase")
 async def get_phase(game_name):
@@ -659,6 +688,10 @@ async def get_phase(game_name):
     else:
         return {"phase_game": get_phase_game(game_name),
         "player_murdered" : player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
+
+@app.post("/phase")
+async def set_phase(game_name: str, phase: int):
+    set_phase_game(game_name, phase)
 
 @app.get("/get_player")
 async def get_player(game_name: str, current_user: User = Depends(get_current_user)):
@@ -687,37 +720,3 @@ async def get_min_dir_elect(game_name: str):
                 "elect_dir": player_dir}
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
-
-
-@app.get("/game_state")
-async def get_game_state(game_name: str):
-    num_fenix_orders_proclamed = get_num_proclamations_order_fenix(game_name)
-    num_death_eaters_proclamed = get_num_proclamations_death_eaters(game_name)
-    num_proclamations_availables = num_of_cards_in_steal_stack(game_name)
-    num_proclamations_discarted = get_number_proclamations_discarted(game_name)
-    election_marker = get_election_marker(game_name)
-    return {
-        "num_fenix_orders": num_fenix_orders_proclamed,
-        "num_death_eaters": num_death_eaters_proclamed,
-        "num_proclamations_avilables": num_proclamations_availables,
-        "num_proclamations_discarted": num_proclamations_discarted,
-        "election_marker": election_marker
-    }
-
-@app.get("/game/{game_name}/exit")
-async def exit_game(game_name: str, current_user: User = Depends(get_current_user)):
-    if game_exists(game_name):
-        if get_game_by_name(game_name).initial_date is None:
-            player_id = get_player_in_game_by_email(game_name,current_user.email_address)
-            if is_the_creator_game(game_name,current_user.email_address):
-                delete_all_player(game_name)
-                set_phase_game(game_name,5)
-            else:
-                delete_player_from_game(game_name,player_id)
-        else:
-            raise HTTPException(status_code=404,
-                                detail="Game is already started")
-    else:
-        raise HTTPException(status_code=404,
-                            detail="Game is not exists")
-

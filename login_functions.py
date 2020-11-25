@@ -48,7 +48,7 @@ def generate_html(user: str,validate_token:str):
     <body>
     <p>Hi! """ + user + """ Thanks for register in secret-voldemort.com
     <br>Please follow the next link to verified account and play!
-    <br>http://localhost:8000/validate/""" + validate_token +"""</p>
+    <br>http://localhost:3000/validate/""" + validate_token +"""</p>
     </body>
     </html>
     """

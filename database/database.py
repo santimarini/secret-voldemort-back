@@ -926,7 +926,7 @@ def delete_player_from_game(game_name,player_id):
     delete_player(player_id)
 
 @pony.orm.db_session
-def get_number_proclamations_discarted(game_name):
+def get_number_proclamations_discarded(game_name):
     game = get_game_by_name(game_name)
     n = 0
     for p in game.proclamation:
