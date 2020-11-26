@@ -359,6 +359,7 @@ async def dir_post(game_name: str, dir: int):
         if game_is_not_started(game_name):
             raise HTTPException(status_code=400, detail="game is not started")
         set_phase_game(game_name,2)
+        reset_votes_players(game_name)
         turn_id = get_turn_by_gamename(game_name)
         set_post_dir(turn_id, dir)
         dir_dict = player_to_dict(dir)
@@ -389,7 +390,6 @@ async def vote_player(game_name: str, vote: bool,
                 finish_game_id = end_game(game_name, "Death Eaters")
                 return finished_game_to_dict(finish_game_id)
             set_phase_game(game_name,3)
-            reset_votes_players(game_name)
             set_elect_min(turn_id, get_post_min(turn_id))
             set_elect_dir(turn_id, get_post_dir(turn_id))
             set_previous_min(turn_id, get_elect_min(turn_id))
@@ -399,7 +399,6 @@ async def vote_player(game_name: str, vote: bool,
                     "elect_dir": player_to_dict(get_elect_dir(turn_id))}
         else:
             set_phase_game(game_name,1)
-            reset_votes_players(game_name)
             increment_marker(turn_id)
             set_elect_dir(turn_id, None)
             set_elect_min(turn_id, None)
@@ -433,6 +432,7 @@ async def draw_three_cards(game_name: str):
 async def discard_card_min(card_id: int, game_name: str):
     if card_id in get_cards_in_game(game_name):
         set_phase_game(game_name,4)
+        reset_votes_players(game_name)
         discard(card_id)
         card = card_to_dict(card_id)
         return {"card": card}
@@ -549,10 +549,8 @@ async def avada_kedavra(game_name: str, victim: int):
     turn_id = get_turn_by_gamename(game_name)
     set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
-        finish_game_id = end_game(game_name, "Fenix Order")
         set_phase_game(game_name, 5)
-        return {"player_murdered": player_dict,
-                "finish_game": finished_game_to_dict(finish_game_id)}
+        return {"player_murdered": player_dict}
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
@@ -623,12 +621,10 @@ async def expelliarmus(game_name: str, vote: bool):
             discard(cards_list[0]["id"])
             discard(cards_list[1]["id"])
             set_phase_game(game_name, 1)
-            reset_votes_players(game_name)
             return {"Se descartaron las cartas"}
         else:
             set_vote_to_zero(turn_id)
             set_phase_game(game_name, 3)
-            reset_votes_players(game_name)
             return {"No se produjo expelliarmus"}
     else:
         return {"Se voto un expelliarmus tiene que decidir el ministro"}
