@@ -239,10 +239,11 @@ async def create_game(game: ConfigGame,
 @app.get("/game/{game_name}")
 async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
     if game_exists(game_name):
-        if get_game_by_name(game_name).initial_date is not None and not is_user_in_game(current_user.email_address,
-                                                                                        game_name):
+        if (get_game_by_name(game_name).initial_date is not None) and \
+                (not is_user_in_game(current_user.email_address,game_name)) and\
+                (get_game_by_name(game_name).end_date is not None):
             raise HTTPException(status_code=404,
-                                detail="The game has already started"
+                                detail="The game is not available"
                                 )
         else:
             game = get_game_by_name(game_name)
@@ -277,10 +278,10 @@ async def exit_game(game_name: str, current_user: User = Depends(get_current_use
         if get_game_by_name(game_name).initial_date is None:
             player_id = get_player_in_game_by_email(game_name,current_user.email_address)
             if is_the_creator_game(game_name,current_user.email_address):
+                set_end_date(game_name)
                 delete_all_player(game_name)
-                finish_game_id = end_game(game_name, "")
                 set_phase_game(game_name,5)
-                return finished_game_to_dict(finish_game_id)
+                return {"The creator leaved the game"}
             else:
                 delete_player_from_game(game_name,player_id)
         else:
@@ -549,7 +550,9 @@ async def avada_kedavra(game_name: str, victim: int):
     turn_id = get_turn_by_gamename(game_name)
     set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
+        finish_id
         set_phase_game(game_name, 5)
+        finish_game_id = end_game(game_name, "Death Eaters")
         return {"player_murdered": player_dict}
     else:
         set_phase_game(game_name, 1)

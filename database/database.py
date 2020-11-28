@@ -245,12 +245,6 @@ def delete_player(player_id):
 
 
 @pony.orm.db_session
-def delete_all_player(game_name):
-    for player in get_game_by_name(game_name).players:
-        delete_player(player.id)
-
-
-@pony.orm.db_session
 def delete_all_box(game_name):
     for b in get_game_by_name(game_name).box:
         Box[b.id].delete()
@@ -846,7 +840,7 @@ def player_belong_to_game(player_id, game_name):
 
 @pony.orm.db_session
 def get_games():
-    list_game = Game.select(lambda g: g.initial_date is None)[:]
+    list_game = Game.select(lambda g: g.initial_date is None and g.end_date is None)[:]
     dict_g = []
     for g in list(filter(lambda g: g.max_players > num_of_players(g.name), list_game)):
         dict_g.append(game_to_dict(g))
