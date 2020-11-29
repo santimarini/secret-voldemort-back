@@ -62,7 +62,7 @@ class Turn(db.Entity):
     num_of_turn = Required(int)
     elect_marker = Required(int)
     previous_min = Optional(int)
-    previous_dir = Optional(int)
+    # previous_dir = Optional(int)
     post_min = Optional(int)
     post_dir = Optional(int)
     elect_min = Optional(int)
