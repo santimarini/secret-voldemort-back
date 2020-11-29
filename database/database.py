@@ -35,9 +35,9 @@ class Player(db.Entity):
 class FinishedGames(db.Entity):
     id = PrimaryKey(int, auto=True)
     game_name = Required(str)
-    initial_date = Required(datetime)
-    end_date = Required(datetime)
-    win = Required(str)
+    initial_date = Optional(datetime)
+    end_date = Optional(datetime)
+    win = Optional(str)
     users = Set('User')
 
 
@@ -684,6 +684,10 @@ def new_finished_game(game_name, loyalty_win):
         finish_game.users.add(p.user1)
     return finish_game.id
 
+@pony.orm.db_session
+def get_finished_game(game_name):
+    finished_game = FinishedGames.get(game_name=game_name)
+    return finished_game
 
 @pony.orm.db_session
 def finished_game_to_dict(finished_game_id):
@@ -856,15 +860,12 @@ def save_user_image(email, photo_link):
 @pony.orm.db_session
 def get_player_in_game_by_email(game_name, email):
     user = get_user_by_email(email)
-    print(user)
     game = get_game_by_name(game_name)
-    print(game)
     player_id = 0
     for p in user.players:
         if p.actualGame.id == game.id:
             player_id = p.id
             break
-    print(player_id)
     return player_id
 
 @pony.orm.db_session
@@ -917,7 +918,6 @@ def delete_player_from_game(game_name,player_id):
     g = get_game_by_name(game_name)
     p = Player[player_id]
     g.players.remove(p)
-    delete_player(player_id)
 
 @pony.orm.db_session
 def get_number_proclamations_discarded(game_name):
@@ -948,6 +948,12 @@ def get_num_proclamations_death_eaters(game_name):
 
 @pony.orm.db_session
 def delete_all_player(game_name):
+    game = get_game_by_name(game_name)
+    for player in game.players:
+        game.players.remove(player)
+
+@pony.orm.db_session
+def players_out_of_game(game_name):
     game = get_game_by_name(game_name)
     for player in game.players:
         game.players.remove(player)

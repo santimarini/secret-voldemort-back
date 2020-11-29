@@ -278,9 +278,9 @@ async def exit_game(game_name: str, current_user: User = Depends(get_current_use
         if get_game_by_name(game_name).initial_date is None:
             player_id = get_player_in_game_by_email(game_name,current_user.email_address)
             if is_the_creator_game(game_name,current_user.email_address):
+                set_phase_game(game_name, 5)
                 set_end_date(game_name)
-                delete_all_player(game_name)
-                set_phase_game(game_name,5)
+                new_finished_game(game_name,"")
                 return {"The creator leaved the game"}
             else:
                 delete_player_from_game(game_name,player_id)
@@ -388,7 +388,8 @@ async def vote_player(game_name: str, vote: bool,
             if voldemort_is_director(turn_id) and \
             get_num_proclamations_death_eaters(game_name) >= 3:
                 set_phase_game(game_name,5)
-                finish_game_id = end_game(game_name, "Death Eaters")
+                # finish_game_id = end_game(game_name, "Death Eaters")
+                finish_game_id = new_finished_game(game_name, "Death Eaters")
                 return finished_game_to_dict(finish_game_id)
             set_phase_game(game_name,3)
             set_elect_min(turn_id, get_post_min(turn_id))
@@ -482,7 +483,8 @@ async def proclaim_card(card_id,game_name):
         if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
                 (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
             set_phase_game(game_name, 5)
-            finish_game_id = end_game(game_name,box.loyalty)
+            #finish_game_id = end_game(game_name,box.loyalty)
+            finish_game_id = new_finished_game(game_name, box.loyalty)
             return finished_game_to_dict(finish_game_id)
         if not box.spell == "":
             set_phase_game(game_name,6)
@@ -552,8 +554,10 @@ async def avada_kedavra(game_name: str, victim: int):
     if player_dict["rol"] == "Voldemort":
         finish_id
         set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, "Death Eaters")
-        return {"player_murdered": player_dict}
+        # finish_game_id = end_game(game_name, "Death Eaters")
+        finish_game_id = new_finished_game(game_name, "Death Eaters")
+        return { "ganadores": finished_game_to_dict(finish_game_id),
+                "player_murdered": player_dict}
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
@@ -657,7 +661,8 @@ async def caos(game_name: str):
     if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
             (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
         set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, box.loyalty)
+        # finish_game_id = end_game(game_name, box.loyalty)
+        finish_game_id = new_finished_game(game_name, box.loyalty)
         return finished_game_to_dict(finish_game_id)
     set_phase_game(game_name, 1)
     marker_to_zero(turn_id)
@@ -670,6 +675,12 @@ async def caos(game_name: str):
 
 @app.get("/game_state")
 async def get_game_state(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
     num_fenix_orders_proclamed = get_num_proclamations_order_fenix(game_name)
     num_death_eaters_proclamed = get_num_proclamations_death_eaters(game_name)
     num_proclamations_availables = num_of_cards_in_steal_stack(game_name)
@@ -715,9 +726,12 @@ async def get_phase(game_name):
     if get_phase_game(game_name) == 6:
         box = get_last_box_used(game_name)
         return {"phase_game": get_phase_game(game_name), "spell": box.spell}
+    if get_phase_game(game_name) == 5:
+        finished_game = get_finished_game(game_name)
+        return {"phase_game": get_phase_game(game_name), "players": finished_game_to_dict(finished_game.id)}
     else:
         return {"phase_game": get_phase_game(game_name),
-        "player_murdered" : player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
+        "player_murdered": player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
 
 @app.post("/phase")
 async def set_phase(game_name: str, phase: int):
