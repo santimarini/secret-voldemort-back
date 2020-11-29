@@ -3,6 +3,20 @@ from datetime import datetime
 from collections import deque
 import random
 
+MAX_LEN_ALIAS = 16
+MIN_LEN_ALIAS = 4
+MAX_LEN_PASSWORD = 16
+MIN_LEN_PASSWORD = 4
+MAX_LEN_EMAIL = 30
+MIN_LEN_EMAIL = 10
+MAX_LEN_GAME_NAME =  16
+MIN_LEN_GAME_NAME = 4
+MIN_NUM_OF_PLAYERS = 5
+MAX_NUM_OF_PLAYERS = 10
+MIN_CARDS_IN_STACK = 3
+MAX_BOX_FENIX_ORDER = 5
+MAX_BOX_DEATH_EATERS = 6
+
 db = pony.orm.Database()
 
 db.bind(provider='sqlite', filename='database.sqlite', create_db=True)
@@ -650,6 +664,20 @@ def get_next_box(card_id, game_name):
                 box = i
                 break
     return box.id
+
+@pony.orm.db_session
+def proclaim_card(game_name):
+    turn_id = get_turn_by_gamename(game_name)
+    list_of_cards_id = get_cards_in_game(game_name)
+    card_id = list_of_cards_id.pop()
+    proclaim(card_id)
+    box_id = get_next_box(card_id,game_name)
+    box = get_box(box_id)
+    set_used_box(box_id)
+    marker_to_zero(turn_id)
+    if num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK:
+        shuffle_cards(game_name)
+    return box
 
 
 @pony.orm.db_session
