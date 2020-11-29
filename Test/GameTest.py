@@ -244,5 +244,91 @@ class GameTest(unittest.TestCase):
         response = requests.post(self.api + "/finish_imperius", params={"game_name": "game_init_test_8"})
         self.assertEqual(400, response.status_code)
 
+    def test_expelliarmus_game_not_exist(self):
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_notexist", "vote": True})
+        self.assertEqual(400, response.status_code)
+
+    def test_expelliarmus_game_not_started(self):
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_8", "vote": True})
+        self.assertEqual(400, response.status_code)
+
+    def test_expelliarmus_less_5_proclamation(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a7"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a7"})
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a7", "vote": True})
+        self.assertEqual(401, response.status_code)
+
+    def test_expelliarmus_one_vote_positive(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a8"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a8"})
+        # Get cards
+        list_of_cards_id = get_cards_in_game("game_init_test_a8")
+        cards_dead = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
+        # Proclaim dead Eaters
+        for i in range(5):
+            proclaim(cards_dead[i])
+            box_id = get_next_box(cards_dead[i], "game_init_test_a8")
+            set_used_box(box_id)
+        # Expelliarmus
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a8", "vote": True})
+        self.assertEqual(200, response.status_code)
+
+    def test_expelliarmus_one_vote_negative(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a9"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a9"})
+        # Get cards
+        list_of_cards_id = get_cards_in_game("game_init_test_a9")
+        cards_dead = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
+        # Proclaim dead Eaters
+        for i in range(5):
+            proclaim(cards_dead[i])
+            box_id = get_next_box(cards_dead[i], "game_init_test_a9")
+            set_used_box(box_id)
+        # Expelliarmus
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a9", "vote": False})
+        self.assertEqual(200, response.status_code)
+
+    def test_expelliarmus_ok(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a10"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a10"})
+        # Get cards
+        list_of_cards_id = get_cards_in_game("game_init_test_a10")
+        cards_dead = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
+        # Proclaim dead Eaters
+        for i in range(5):
+            proclaim(cards_dead[i])
+            box_id = get_next_box(cards_dead[i], "game_init_test_a10")
+            set_used_box(box_id)
+        # Expelliarmus
+        requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a10", "vote": True})
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a10", "vote": True})
+        self.assertEqual(200, response.status_code)
+
+    def test_expelliarmus_not_accept(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a11"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a11"})
+        # Get cards
+        list_of_cards_id = get_cards_in_game("game_init_test_a11")
+        cards_dead = list(filter(lambda x: card_to_dict(x)["loyalty"] == 'Death Eaters', list_of_cards_id))
+        # Proclaim dead Eaters
+        for i in range(5):
+            proclaim(cards_dead[i])
+            box_id = get_next_box(cards_dead[i], "game_init_test_a11")
+            set_used_box(box_id)
+        # Expelliarmus
+        requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a11", "vote": True})
+        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_a11", "vote": False})
+        self.assertEqual(200, response.status_code)
+
 if __name__ == '__main__':
     unittest.main()

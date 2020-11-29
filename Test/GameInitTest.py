@@ -22,7 +22,6 @@ class GameInitTest(unittest.TestCase):
         # Dir
         requests.put(self.api + '/game', params={"game_name": "game_init_test", "dir": 7})
         # Vote
-        # for i in range(5):
         response = requests.put(self.api + '/game/game_init_test/vote',
                                 params={"game_name": "game_init_test", "vote": True})
         resp_json = json.loads(response.text)
