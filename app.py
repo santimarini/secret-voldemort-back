@@ -389,6 +389,7 @@ async def vote_player(game_name: str, vote: bool,
             get_num_proclamations_death_eaters(game_name) >= 3:
                 set_phase_game(game_name,5)
                 # finish_game_id = end_game(game_name, "Death Eaters")
+                set_end_date(game_name)
                 finish_game_id = new_finished_game(game_name, "Death Eaters")
                 return finished_game_to_dict(finish_game_id)
             set_phase_game(game_name,3)
@@ -484,6 +485,7 @@ async def proclaim_card(card_id,game_name):
                 (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
             set_phase_game(game_name, 5)
             #finish_game_id = end_game(game_name,box.loyalty)
+            set_end_date(game_name)
             finish_game_id = new_finished_game(game_name, box.loyalty)
             return finished_game_to_dict(finish_game_id)
         if not box.spell == "":
@@ -555,6 +557,7 @@ async def avada_kedavra(game_name: str, victim: int):
     if player_dict["rol"] == "Voldemort":
         set_phase_game(game_name, 5)
         # finish_game_id = end_game(game_name, "Death Eaters")
+        set_end_date(game_name)
         finish_game_id = new_finished_game(game_name, "Death Eaters")
         return { "ganadores": finished_game_to_dict(finish_game_id),
                 "player_murdered": player_dict}
@@ -664,6 +667,7 @@ async def chaos(game_name: str):
             (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
         set_phase_game(game_name, 5)
         # finish_game_id = end_game(game_name, box.loyalty)
+        set_end_date(game_name)
         finish_game_id = new_finished_game(game_name, box.loyalty)
         return finished_game_to_dict(finish_game_id)
     set_phase_game(game_name, 1)
