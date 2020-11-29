@@ -248,7 +248,7 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
         else:
             game = get_game_by_name(game_name)
             if not is_user_in_game(current_user.email_address, game_name):
-                player_id = new_player(current_user.email_address)
+                player_id = new_player(current_user.email_address, game_name)
                 join_game(player_id, game_name)
 
         if num_of_players(game_name) <= game.max_players:
@@ -531,6 +531,7 @@ async def crucio(game_name:str, victim: int):
                             detail="player already bewitched")
     player_dict = player_to_dict(victim)
     set_player_crucio(game_name, victim)
+    set_phase_game(game_name,1)
     return{"alias": player_dict["alias"], "loyalty": player_dict["loyalty"]}
 
 @app.get("/avada_kedavra")
@@ -552,7 +553,6 @@ async def avada_kedavra(game_name: str, victim: int):
     turn_id = get_turn_by_gamename(game_name)
     set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
-        finish_id
         set_phase_game(game_name, 5)
         # finish_game_id = end_game(game_name, "Death Eaters")
         finish_game_id = new_finished_game(game_name, "Death Eaters")
@@ -631,7 +631,7 @@ async def expelliarmus(game_name: str, vote: bool):
             return {"Se descartaron las cartas"}
         else:
             set_vote_to_zero(turn_id)
-            set_phase_game(game_name, 3)
+            set_phase_game(game_name, 8)
             return {"No se produjo expelliarmus"}
     else:
         return {"Se voto un expelliarmus tiene que decidir el ministro"}

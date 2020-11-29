@@ -174,9 +174,10 @@ def get_phase_game(game_name):
 
 
 @pony.orm.db_session
-def new_player(email_address):
+def new_player(email_address, game_name):
+    game = get_game_by_name(game_name)
     user1 = get_user_by_email(email_address)
-    player = Player(alias=user1.name, is_alive=True, user1=user1)
+    player = Player(alias=user1.name, is_alive=True, user1=user1, actualGame=game.id)
     commit()
     return player.id
 
@@ -860,12 +861,20 @@ def save_user_image(email, photo_link):
 @pony.orm.db_session
 def get_player_in_game_by_email(game_name, email):
     user = get_user_by_email(email)
-    game = get_game_by_name(game_name)
-    player_id = 0
+    list_players = []
     for p in user.players:
+        list_players.append(p)
+    list_players_not_none = list(filter(lambda p: p is not None,list_players))
+    print(list_players_not_none)
+    game = get_game_by_name(game_name)
+    print(game)
+    print(game.id)
+    for i in list_players_not_none:
+        print(i.actualGame.id)
+    player_id = 0
+    for p in list_players_not_none:
         if p.actualGame.id == game.id:
             player_id = p.id
-            break
     return player_id
 
 @pony.orm.db_session
