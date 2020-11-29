@@ -2,8 +2,8 @@ import sys
 import os
 
 # DATABASE_PATH = '/home/valentin/secvold/secret-voldemort-back/database'
-DATABASE_PATH = '/home/joaquin/secret-voldemort-back/database'
-# DATABASE_PATH = '/home/agusten/Pavilion/UNC/3erAño/IngenieriaDelSoftware/SecretVoldemort/Proyect/database'
+# DATABASE_PATH = '/home/joaquin/secret-voldemort-back/database'
+DATABASE_PATH = '/home/agusten/Pavilion/UNC/3erAño/IngenieriaDelSoftware/SecretVoldemort/Proyect/database'
 
 sys.path.insert(1, DATABASE_PATH)
 
@@ -285,3 +285,41 @@ join_game(player_id_a7,'game_init_test_a2')
 join_game(player_id_a8,'game_init_test_a2')
 join_game(player_id_a9,'game_init_test_a2')
 join_game(player_id_a10,'game_init_test_a2')
+
+player_id_a11= new_player('emailaddress11@gmail.com')
+player_id_a12= new_player('emailaddress21@gmail.com')
+player_id_a13= new_player('emailaddress31@gmail.com')
+player_id_a14= new_player('emailaddress41@gmail.com')
+player_id_a15= new_player('emailaddress51@gmail.com')
+new_game('game_init_test_a3',5,'emailaddress11@gmail.com')
+join_game(player_id_a11,'game_init_test_a3')
+join_game(player_id_a12,'game_init_test_a3')
+join_game(player_id_a13,'game_init_test_a3')
+join_game(player_id_a14,'game_init_test_a3')
+join_game(player_id_a15,'game_init_test_a3')
+
+player_id_a16= new_player('emailaddress11@gmail.com')
+player_id_a17= new_player('emailaddress21@gmail.com')
+player_id_a18= new_player('emailaddress31@gmail.com')
+player_id_a19= new_player('emailaddress41@gmail.com')
+player_id_a20= new_player('emailaddress51@gmail.com')
+new_game('game_init_test_a4',5,'emailaddress11@gmail.com')
+join_game(player_id_a16,'game_init_test_a4')
+join_game(player_id_a17,'game_init_test_a4')
+join_game(player_id_a18,'game_init_test_a4')
+join_game(player_id_a19,'game_init_test_a4')
+join_game(player_id_a20,'game_init_test_a4')
+
+new_game('game_init_test_a5',5,'emailaddress11@gmail.com')
+
+player_id_a21= new_player('emailaddress11@gmail.com')
+player_id_a22= new_player('emailaddress21@gmail.com')
+player_id_a23= new_player('emailaddress31@gmail.com')
+player_id_a24= new_player('emailaddress41@gmail.com')
+player_id_a25= new_player('emailaddress51@gmail.com')
+new_game('game_init_test_a6',5,'emailaddress11@gmail.com')
+join_game(player_id_a21,'game_init_test_a6')
+join_game(player_id_a22,'game_init_test_a6')
+join_game(player_id_a23,'game_init_test_a6')
+join_game(player_id_a24,'game_init_test_a6')
+join_game(player_id_a25,'game_init_test_a6')

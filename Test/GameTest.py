@@ -1,6 +1,12 @@
 import unittest
 import requests
 import json
+import sys
+
+from mock_database import DATABASE_PATH
+sys.path.insert(1, DATABASE_PATH)
+
+from database import *
 
 class GameTest(unittest.TestCase):
     api = 'http://localhost:8000'
@@ -168,6 +174,75 @@ class GameTest(unittest.TestCase):
         response2 = requests.get(self.api + self.avada_kedavra,
                                  params={"game_name": "game_init_test_10", "victim": player_id})
         self.assertEqual(401, response2.status_code)
+
+    def test_list_imperius(self):
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a3"})
+        response = requests.get(self.api + "/list_imperius", params={"game_name": "game_init_test_a3"})
+        resp_json = json.loads(response.text)
+        if "players_spellbinding" in  resp_json:
+            self.assertEqual(200, response.status_code)
+        else:
+            self.assertEqual(200, 401)
+
+    def test_imperius_ok(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a4"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a4"})
+        set_elect_min(get_turn_by_gamename("game_init_test_a4"), 103)
+        set_elect_dir(get_turn_by_gamename("game_init_test_a4"), 104)
+        # List imperius
+        response = requests.get(self.api + "/list_imperius", params={"game_name": "game_init_test_a4"})
+        resp_json = json.loads(response.text)
+        if "players_spellbinding" in resp_json:
+            # Imperius
+            id_imperius_min = resp_json["players_spellbinding"][0]["id"]
+            response1 = requests.post(self.api + "/imperius", params={"game_name": "game_init_test_a4", "new_min_id": id_imperius_min})
+            self.assertEqual(200, response1.status_code)
+        else:
+            self.assertEqual(200, 401)
+
+    def test_imperius_game_not_exist(self):
+        response = requests.post(self.api + "/imperius", params={"game_name": "game_init_test_a4", "new_min_id": 0})
+        self.assertEqual(400, response.status_code)
+
+    def test_imperius_game_not_started(self):
+        response = requests.post(self.api + "/imperius", params={"game_name": "game_init_test_8", "new_min_id": 0})
+        self.assertEqual(400, response.status_code)
+
+    def test_imperius_player_not_exist(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a5"})
+        response = requests.post(self.api + "/imperius", params={"game_name": "game_init_test_a5", "new_min_id": 0})
+        self.assertEqual(400,response.status_code)
+
+    def test_finished_imperius(self):
+        # Start
+        requests.post(self.api + self.start, params={"game_name": "game_init_test_a6"})
+        # Init turn
+        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_a6"})
+        set_elect_min(get_turn_by_gamename("game_init_test_a6"), 108)
+        set_elect_dir(get_turn_by_gamename("game_init_test_a6"), 109)
+        # List imperius
+        response = requests.get(self.api + "/list_imperius", params={"game_name": "game_init_test_a6"})
+        resp_json = json.loads(response.text)
+        if "players_spellbinding" in resp_json:
+            # Imperius
+            id_imperius_min = resp_json["players_spellbinding"][0]["id"]
+            response1 = requests.post(self.api + "/imperius",
+                                      params={"game_name": "game_init_test_a6", "new_min_id": id_imperius_min})
+            response1 = requests.post(self.api + "/finish_imperius", params={"game_name": "game_init_test_a6"})
+            self.assertEqual(200, response1.status_code)
+        else:
+            self.assertEqual(200, 401)
+
+    def test_finished_imperius_game_not_exist(self):
+        response = requests.post(self.api + "/finish_imperius", params={"game_name": "game_notexist"})
+        self.assertEqual(400,response.status_code)
+
+    def test_finished_imperius_game_not_started(self):
+        response = requests.post(self.api + "/finish_imperius", params={"game_name": "game_init_test_8"})
+        self.assertEqual(400, response.status_code)
 
 if __name__ == '__main__':
     unittest.main()
