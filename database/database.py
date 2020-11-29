@@ -3,20 +3,6 @@ from datetime import datetime
 from collections import deque
 import random
 
-MAX_LEN_ALIAS = 16
-MIN_LEN_ALIAS = 4
-MAX_LEN_PASSWORD = 16
-MIN_LEN_PASSWORD = 4
-MAX_LEN_EMAIL = 30
-MIN_LEN_EMAIL = 10
-MAX_LEN_GAME_NAME =  16
-MIN_LEN_GAME_NAME = 4
-MIN_NUM_OF_PLAYERS = 5
-MAX_NUM_OF_PLAYERS = 10
-MIN_CARDS_IN_STACK = 3
-MAX_BOX_FENIX_ORDER = 5
-MAX_BOX_DEATH_EATERS = 6
-
 db = pony.orm.Database()
 
 db.bind(provider='sqlite', filename='database.sqlite', create_db=True)
@@ -89,6 +75,7 @@ class Turn(db.Entity):
     imperius_minister_old = Optional(int)
     imperius_minister_new = Optional(int)
     player_crucio = Optional(int)
+
 
 class Proclamation(db.Entity):
     loyalty = Required(str)
@@ -300,7 +287,8 @@ def get_player_ids_list(game_name):
         list.append(player.id)
     return list
 
-#create a deck when game is starting, all cards are default "Available"
+
+# create a deck when game is starting, all cards are default "Available"
 @pony.orm.db_session
 def new_deck(game_name):
     game = get_game_by_name(game_name)
@@ -414,11 +402,11 @@ def player_to_dict(player_id):
     if player_id is None:
         return None
     else:
-        p = Player[player_id]    
-        dict_p = dict(id = p.id, alias = p.alias, is_alive = p.is_alive,
-                    loyalty = p.loyalty, rol = p.rol, vote=p.vote,
-                    user1 = p.user1.email_address,
-                    actualGame = p.actualGame.name)
+        p = Player[player_id]
+        dict_p = dict(id=p.id, alias=p.alias, is_alive=p.is_alive,
+                      loyalty=p.loyalty, rol=p.rol, vote=p.vote,
+                      user1=p.user1.email_address,
+                      actualGame=p.actualGame.name)
         return dict_p
 
 
@@ -456,8 +444,9 @@ def get_election_marker(game_name):
     game = get_game_by_name(game_name)
     return game.turn.elect_marker
 
+
 @pony.orm.db_session
-def set_previous_min(turn_id,player_id):
+def set_previous_min(turn_id, player_id):
     Turn[turn_id].previous_min = player_id
 
 
@@ -499,13 +488,14 @@ def get_next_player_to_min(game_name):
         last_min = t.previous_min
         list_player_alive = list(filter(lambda p: p.is_alive, get_player_list(game_name)))
         n = len(list_player_alive)
-        if last_min is None or (list_player_alive.index(Player[last_min]) == n-1):
+        if last_min is None or (list_player_alive.index(Player[last_min]) == n - 1):
             return list_player_alive[0].id
         else:
             return (list_player_alive[(list_player_alive.index(Player[last_min]) + 1)].id)
     else:
         return (t.imperius_minister_new)
-        
+
+
 @pony.orm.db_session
 def get_post_min(turn_id):
     return Turn[turn_id].post_min
@@ -585,7 +575,7 @@ def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
 def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
     turn = get_turn(turn_id)
     list_a = filter(lambda p: p.is_alive and turn.post_min != p.id and
-                            p.id != turn.elect_dir,
+                              p.id != turn.elect_dir,
                     get_player_list(game_name))
     return (list(list_a))
 
@@ -665,20 +655,6 @@ def get_next_box(card_id, game_name):
                 break
     return box.id
 
-@pony.orm.db_session
-def proclaim_card(game_name):
-    turn_id = get_turn_by_gamename(game_name)
-    list_of_cards_id = get_cards_in_game(game_name)
-    card_id = list_of_cards_id.pop()
-    proclaim(card_id)
-    box_id = get_next_box(card_id,game_name)
-    box = get_box(box_id)
-    set_used_box(box_id)
-    marker_to_zero(turn_id)
-    if num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK:
-        shuffle_cards(game_name)
-    return box
-
 
 @pony.orm.db_session
 def box_to_dict(box_id):
@@ -713,10 +689,12 @@ def new_finished_game(game_name, loyalty_win):
         finish_game.users.add(p.user1)
     return finish_game.id
 
+
 @pony.orm.db_session
 def get_finished_game(game_name):
     finished_game = FinishedGames.get(game_name=game_name)
     return finished_game
+
 
 @pony.orm.db_session
 def finished_game_to_dict(finished_game_id):
@@ -750,6 +728,7 @@ def end_game(game_name, loyalty):
     delete_all_player(game_name)
     delete_turn(game_name)
     return finish_game_id
+
 
 @pony.orm.db_session
 def is_card_discard(card_id):
@@ -892,7 +871,7 @@ def get_player_in_game_by_email(game_name, email):
     list_players = []
     for p in user.players:
         list_players.append(p)
-    list_players_not_none = list(filter(lambda p: p is not None,list_players))
+    list_players_not_none = list(filter(lambda p: p is not None, list_players))
     print(list_players_not_none)
     game = get_game_by_name(game_name)
     print(game)
@@ -905,15 +884,18 @@ def get_player_in_game_by_email(game_name, email):
             player_id = p.id
     return player_id
 
+
 @pony.orm.db_session
 def set_vote_player(player_id: int, vote: Optional(bool)):
     Player[player_id].vote = vote
+
 
 @pony.orm.db_session
 def reset_votes_players(game_name):
     game = get_game_by_name(game_name)
     for p in game.players:
         p.vote = None
+
 
 @pony.orm.db_session
 def get_last_box_used(game_name):
@@ -927,22 +909,26 @@ def get_last_box_used(game_name):
     if i < 0:
         return template[0]
     else:
-        return template[i-1]
+        return template[i - 1]
+
 
 @pony.orm.db_session
-def set_min_imperius_old(turn_id: int,old_min_id: int):
+def set_min_imperius_old(turn_id: int, old_min_id: int):
     t = get_turn(turn_id)
     t.imperius_minister_old = old_min_id
 
+
 @pony.orm.db_session
-def set_min_imperius_new(turn_id: int,new_min_id: int):
+def set_min_imperius_new(turn_id: int, new_min_id: int):
     t = get_turn(turn_id)
     t.imperius_minister_new = new_min_id
+
 
 @pony.orm.db_session
 def set_min_imperius_new_None(turn_id: int):
     t = get_turn(turn_id)
     t.imperius_minister_new = None
+
 
 @pony.orm.db_session
 def is_the_creator_game(game_name, email):
@@ -951,10 +937,11 @@ def is_the_creator_game(game_name, email):
 
 
 @pony.orm.db_session
-def delete_player_from_game(game_name,player_id):
+def delete_player_from_game(game_name, player_id):
     g = get_game_by_name(game_name)
     p = Player[player_id]
     g.players.remove(p)
+
 
 @pony.orm.db_session
 def get_number_proclamations_discarded(game_name):
@@ -965,6 +952,7 @@ def get_number_proclamations_discarded(game_name):
             n += 1
     return n
 
+
 @pony.orm.db_session
 def get_num_proclamations_order_fenix(game_name):
     template_fo = get_template_order_f(game_name)
@@ -973,6 +961,7 @@ def get_num_proclamations_order_fenix(game_name):
         if b.is_used:
             n += 1
     return n
+
 
 @pony.orm.db_session
 def get_num_proclamations_death_eaters(game_name):
@@ -983,11 +972,13 @@ def get_num_proclamations_death_eaters(game_name):
             n += 1
     return n
 
+
 @pony.orm.db_session
 def delete_all_player(game_name):
     game = get_game_by_name(game_name)
     for player in game.players:
         game.players.remove(player)
+
 
 @pony.orm.db_session
 def players_out_of_game(game_name):
@@ -996,20 +987,24 @@ def players_out_of_game(game_name):
         game.players.remove(player)
         delete_player(player.id)
 
+
 @pony.orm.db_session
 def set_player_crucio(game_name, player_id):
     get_turn(get_turn_by_gamename(game_name)).player_crucio = player_id
+
 
 @pony.orm.db_session
 def set_min_imperius_old_None(turn_id: int):
     t = get_turn(turn_id)
     t.imperius_minister_old = None
 
+
 @pony.orm.db_session
 def voldemort_is_director(turn_id):
     turn = Turn[turn_id]
     player = Player[turn.post_dir]
     return player.rol == "Voldemort"
+
 
 @pony.orm.db_session
 def player_already_vote(player_id):

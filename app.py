@@ -4,6 +4,21 @@ from login_functions import *
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+MAX_LEN_ALIAS = 16
+MIN_LEN_ALIAS = 4
+MAX_LEN_PASSWORD = 16
+MIN_LEN_PASSWORD = 4
+MAX_LEN_EMAIL = 30
+MIN_LEN_EMAIL = 10
+MAX_LEN_GAME_NAME =  16
+MIN_LEN_GAME_NAME = 4
+MIN_NUM_OF_PLAYERS = 5
+MAX_NUM_OF_PLAYERS = 10
+MIN_CARDS_IN_STACK = 3
+MAX_BOX_FENIX_ORDER = 5
+MAX_BOX_DEATH_EATERS = 6
+
+
 app = FastAPI(
     title="Secret Voldemort",
     description="Ingenieria del Software 2020 - Desaproba2",
@@ -380,6 +395,7 @@ async def vote_player(game_name: str, vote: bool,
             set_elect_min(turn_id, get_post_min(turn_id))
             set_elect_dir(turn_id, get_post_dir(turn_id))
             set_previous_min(turn_id, get_elect_min(turn_id))
+            set_previous_dir(turn_id, get_elect_dir(turn_id))
             set_vote_to_zero(turn_id)
             return {"elect_min": player_to_dict(get_elect_min(turn_id)),
                     "elect_dir": player_to_dict(get_elect_dir(turn_id))}
@@ -389,18 +405,8 @@ async def vote_player(game_name: str, vote: bool,
             set_elect_dir(turn_id, None)
             set_elect_min(turn_id, None)
             set_previous_min(turn_id, get_post_min(turn_id))
+            set_previous_dir(turn_id, get_post_dir(turn_id))
             set_vote_to_zero(turn_id)
-            turn = get_turn(turn_id)
-            if turn.elect_marker >= 3:
-                set_elect_dir(turn_id, None)
-                set_elect_min(turn_id, None)
-                box = proclaim_card(game_name)
-                if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
-                        (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
-                    set_phase_game(game_name, 5)
-                    # finish_game_id = end_game(game_name,box.loyalty)
-                    finish_game_id = new_finished_game(game_name, box.loyalty)
-                    return finished_game_to_dict(finish_game_id)
             return {"status_vote": "there was no consensus, "
                                    "the election marker advances one place",
                     "mark_election": get_turn(turn_id).elect_marker}
@@ -458,7 +464,7 @@ async def discard_card_dir(card_id: int, game_name: str):
         raise HTTPException(status_code=404, detail="card not available")
 
 @app.put("/cards/proclaim")
-async def proclaim_card_dir(card_id,game_name):
+async def proclaim_card(card_id,game_name):
     if game_exists(game_name):
         if card_doesnt_exist(card_id):
             raise HTTPException(status_code=400,detail="inexistent card")
@@ -466,7 +472,14 @@ async def proclaim_card_dir(card_id,game_name):
             raise HTTPException(status_code=400, detail="game is not started")
         if (not card_belong_to_game(card_id,game_name)):
             raise HTTPException(status_code=400, detail="card doesnt belong to game")
-        box = proclaim_card(game_name)
+        turn_id = get_turn_by_gamename(game_name)
+        marker_to_zero(turn_id)
+        proclaim(card_id)
+        box_id = get_next_box(card_id,game_name)
+        box = get_box(box_id)
+        set_used_box(box_id)
+        if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
+            shuffle_cards(game_name)
         if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
                 (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
             set_phase_game(game_name, 5)
@@ -478,7 +491,7 @@ async def proclaim_card_dir(card_id,game_name):
         else:
             set_phase_game(game_name, 1)
         return {
-            "box": box_to_dict(box.id)
+            "box": box_to_dict(box_id)
         }
     else:
         raise HTTPException(status_code=400,detail="inexistent game")
@@ -613,17 +626,9 @@ async def expelliarmus(game_name: str, vote: bool):
             cards_list = []
             for c in range(2):
                 cards_list.append(card_to_dict(list_of_cards_id.pop()))
+            increment_marker(turn_id)
             discard(cards_list[0]["id"])
             discard(cards_list[1]["id"])
-            set_elect_dir(turn_id, None)
-            set_elect_min(turn_id, None)
-            box = proclaim_card(game_name)
-            if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
-                    (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
-                set_phase_game(game_name, 5)
-                # finish_game_id = end_game(game_name,box.loyalty)
-                finish_game_id = new_finished_game(game_name, box.loyalty)
-                return finished_game_to_dict(finish_game_id)
             set_phase_game(game_name, 1)
             return {"Se descartaron las cartas"}
         else:
@@ -633,6 +638,42 @@ async def expelliarmus(game_name: str, vote: bool):
     else:
         return {"Se voto un expelliarmus tiene que decidir el ministro"}
 
+
+@app.get("/chaos")
+async def chaos(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
+    # Get card
+    list_of_cards_id = get_cards_in_game(game_name)
+    cards_list = [card_to_dict(list_of_cards_id.pop())]
+    # Proclaim
+    card_id = cards_list[0]["id"]
+    turn_id = get_turn_by_gamename(game_name)
+    proclaim(card_id)
+    box_id = get_next_box(card_id, game_name)
+    box = get_box(box_id)
+    set_used_box(box_id)
+    if num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK:
+        shuffle_cards(game_name)
+    # In case the game ends
+    if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
+            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
+        set_phase_game(game_name, 5)
+        # finish_game_id = end_game(game_name, box.loyalty)
+        finish_game_id = new_finished_game(game_name, box.loyalty)
+        return finished_game_to_dict(finish_game_id)
+    set_phase_game(game_name, 1)
+    marker_to_zero(turn_id)
+    # Limitations are eliminated
+    set_elect_dir(turn_id, None)
+    set_elect_min(turn_id, None)
+    return {
+        "box": box_to_dict(box_id)
+    }
 
 @app.get("/game_state")
 async def get_game_state(game_name: str):
