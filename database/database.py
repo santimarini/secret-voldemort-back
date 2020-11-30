@@ -940,8 +940,10 @@ def is_the_creator_game(game_name, email):
 def delete_player_from_game(game_name, player_id):
     g = get_game_by_name(game_name)
     p = Player[player_id]
+    print(p.user1)
+    user = get_user_by_email(p.user1.email_address)
     g.players.remove(p)
-
+    user.players.remove(p)
 
 @pony.orm.db_session
 def get_number_proclamations_discarded(game_name):

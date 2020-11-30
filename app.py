@@ -734,7 +734,8 @@ async def get_phase(game_name):
         return {"phase_game": get_phase_game(game_name), "spell": box.spell}
     if get_phase_game(game_name) == 5:
         finished_game = get_finished_game(game_name)
-        return {"phase_game": get_phase_game(game_name), "players": finished_game_to_dict(finished_game.id)}
+        return {"phase_game": get_phase_game(game_name), "players": finished_game_to_dict(finished_game.id),
+                "player_murdered": player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
     else:
         return {"phase_game": get_phase_game(game_name),
         "player_murdered": player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
