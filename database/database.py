@@ -175,10 +175,9 @@ def get_phase_game(game_name):
 
 
 @pony.orm.db_session
-def new_player(email_address, game_name):
-    game = get_game_by_name(game_name)
+def new_player(email_address):
     user1 = get_user_by_email(email_address)
-    player = Player(alias=user1.name, is_alive=True, user1=user1, actualGame=game.id)
+    player = Player(alias=user1.name, is_alive=True, user1=user1)
     commit()
     return player.id
 
