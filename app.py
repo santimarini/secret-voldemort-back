@@ -237,7 +237,8 @@ async def create_game(game: ConfigGame,
 
 
 @app.get("/game/{game_name}")
-async def join_url(game_name: str, current_user: User = Depends(get_current_verified_user)):
+async def join_url(game_name: str, current_user: User =
+                    Depends(get_current_verified_user)):
     if game_exists(game_name):
         if (get_game_by_name(game_name).initial_date is not None) and \
                 (not is_user_in_game(current_user.email_address,game_name)) and\
@@ -273,14 +274,16 @@ async def join_url(game_name: str, current_user: User = Depends(get_current_veri
                             detail="Game is not exists")
 
 @app.get("/exit_game")
-async def exit_game(game_name: str, current_user: User = Depends(get_current_user)):
+async def exit_game(game_name: str, current_user: User =
+                    Depends(get_current_user)):
     if game_exists(game_name):
         if get_game_by_name(game_name).initial_date is None:
-            player_id = get_player_in_game_by_email(game_name,current_user.email_address)
+            player_id = get_player_in_game_by_email(game_name,
+                                                    current_user.email_address)
             if is_the_creator_game(game_name,current_user.email_address):
+                set_phase_game(game_name, 5)
                 set_end_date(game_name)
-                delete_all_player(game_name)
-                set_phase_game(game_name,5)
+                new_finished_game(game_name,"", "creator left the game")
                 return {"The creator leaved the game"}
             else:
                 delete_player_from_game(game_name,player_id)
@@ -307,6 +310,7 @@ async def start_game(game_name: str):
     new_templates(game_name)
     number_players = num_of_players(game_name)
     config_boards(game_name, number_players)
+    set_player_position(game_name, number_players)
     assing_loyalty_and_rol(game_name, number_players)
     player_list = get_player_list(game_name)
     player_dict = []
@@ -338,12 +342,14 @@ async def next_turn_begin(game_name: str):
         next_turn(turn_id)
         turn = get_turn(turn_id)
         if num_of_players_alive(game_name) > MIN_NUM_OF_PLAYERS:
-            list_player = get_players_avaibles_to_elect_more_5players(game_name,turn_id)
+            list_player = \
+                get_players_avaibles_to_elect_more_5players(game_name,turn_id)
             list_player_dict = []
             for p in list_player:
                 list_player_dict.append(player_to_dict(p.id))
         else:
-            list_player = get_players_avaibles_to_elect_less_5players(game_name,turn_id)
+            list_player = \
+                get_players_avaibles_to_elect_less_5players(game_name,turn_id)
             list_player_dict = []
             for p in list_player:
                 list_player_dict.append(player_to_dict(p.id))
@@ -373,7 +379,8 @@ async def dir_post(game_name: str, dir: int):
 @app.put("/game/{game_name}/vote")
 async def vote_player(game_name: str, vote: bool,
                       current_user: User = Depends(get_current_verified_user)):
-    player_id = get_player_in_game_by_email(game_name, current_user.email_address)
+    player_id = \
+        get_player_in_game_by_email(game_name, current_user.email_address)
     if player_already_vote(player_id):
         raise HTTPException(status_code=401, detail="player already vote")
     turn_id = get_turn_by_gamename(game_name)
@@ -388,7 +395,11 @@ async def vote_player(game_name: str, vote: bool,
             if voldemort_is_director(turn_id) and \
             get_num_proclamations_death_eaters(game_name) >= 3:
                 set_phase_game(game_name,5)
-                finish_game_id = end_game(game_name, "Death Eaters")
+                # finish_game_id = end_game(game_name, "Death Eaters")
+                set_end_date(game_name)
+                finish_game_id = new_finished_game(game_name,
+                                                   "Death Eaters",
+                                                   "Voldemort has been elected")
                 return finished_game_to_dict(finish_game_id)
             set_phase_game(game_name,3)
             set_elect_min(turn_id, get_post_min(turn_id))
@@ -466,11 +477,14 @@ async def discard_card_dir(card_id: int, game_name: str):
 async def proclaim_card(card_id,game_name):
     if game_exists(game_name):
         if card_doesnt_exist(card_id):
-            raise HTTPException(status_code=400,detail="inexistent card")
+            raise HTTPException(status_code=400,
+                                detail="inexistent card")
         if game_is_not_started(game_name):
-            raise HTTPException(status_code=400, detail="game is not started")
+            raise HTTPException(status_code=400,
+                                detail="game is not started")
         if (not card_belong_to_game(card_id,game_name)):
-            raise HTTPException(status_code=400, detail="card doesnt belong to game")
+            raise HTTPException(status_code=400,
+                                detail="card doesnt belong to game")
         turn_id = get_turn_by_gamename(game_name)
         marker_to_zero(turn_id)
         proclaim(card_id)
@@ -480,9 +494,13 @@ async def proclaim_card(card_id,game_name):
         if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
             shuffle_cards(game_name)
         if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
-                (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
+            (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
             set_phase_game(game_name, 5)
-            finish_game_id = end_game(game_name,box.loyalty)
+            #finish_game_id = end_game(game_name,box.loyalty)
+            set_end_date(game_name)
+            finish_game_id = new_finished_game(game_name,
+                                               box.loyalty,
+                                               "Full board")
             return finished_game_to_dict(finish_game_id)
         if not box.spell == "":
             set_phase_game(game_name,6)
@@ -529,6 +547,7 @@ async def crucio(game_name:str, victim: int):
                             detail="player already bewitched")
     player_dict = player_to_dict(victim)
     set_player_crucio(game_name, victim)
+    set_phase_game(game_name,1)
     return{"alias": player_dict["alias"], "loyalty": player_dict["loyalty"]}
 
 @app.get("/avada_kedavra")
@@ -550,10 +569,14 @@ async def avada_kedavra(game_name: str, victim: int):
     turn_id = get_turn_by_gamename(game_name)
     set_player_killed(turn_id, victim)
     if player_dict["rol"] == "Voldemort":
-        finish_id
         set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, "Death Eaters")
-        return {"player_murdered": player_dict}
+        # finish_game_id = end_game(game_name, "Death Eaters")
+        set_end_date(game_name)
+        finish_game_id = new_finished_game(game_name,
+                                           "Death Eaters",
+                                           "Voldemort has been killed")
+        return { "ganadores": finished_game_to_dict(finish_game_id),
+                "player_murdered": player_dict}
     else:
         set_phase_game(game_name, 1)
         return {"player_murdered": player_dict}
@@ -579,9 +602,11 @@ async def imperius(game_name: str, new_min_id: int):
         turn_id = get_turn_by_gamename(game_name)
         elect_min = get_elect_min(turn_id)
         if player_doesnt_exists(new_min_id) or player_doesnt_exists(elect_min):
-            raise HTTPException(status_code=400, detail="new minister or old minister doesnt exists")
+            raise HTTPException(status_code=400,
+                                detail="new minister or old minister doesnt exists")
         set_min_imperius_old(turn_id, elect_min)
         set_min_imperius_new(turn_id, new_min_id)
+        set_phase_game(game_name,1)
         return {"ministers seted correctly"}
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
@@ -591,12 +616,14 @@ async def imperius(game_name: str, new_min_id: int):
 async def finish_imperius(game_name: str):
     if game_exists(game_name):
         if game_is_not_started(game_name):
-            raise HTTPException(status_code=400, detail="game is not started")
+            raise HTTPException(status_code=400,
+                                detail="game is not started")
         turn_id = get_turn_by_gamename(game_name)
         turn = get_turn(turn_id)
-        set_previous_min(turn_id, turn.imperius_minister_old)
-        set_min_imperius_old_None(turn_id)
-        set_min_imperius_new_None(turn_id)
+        if turn.imperius_minister_old is not None:
+            set_previous_min(turn_id, turn.imperius_minister_old)
+            set_min_imperius_old_None(turn_id)
+            set_min_imperius_new_None(turn_id)
         return {"imperius_finished"}
     else:
         raise HTTPException(status_code=400, detail="inexistent game")
@@ -620,21 +647,19 @@ async def expelliarmus(game_name: str, vote: bool):
             cards_list = []
             for c in range(2):
                 cards_list.append(card_to_dict(list_of_cards_id.pop()))
-            increment_marker(turn_id)
-            discard(cards_list[0]["id"])
-            discard(cards_list[1]["id"])
+                discard(cards_list[c]["id"])
             set_phase_game(game_name, 1)
             return {"Se descartaron las cartas"}
         else:
             set_vote_to_zero(turn_id)
-            set_phase_game(game_name, 3)
+            set_phase_game(game_name, 8)
             return {"No se produjo expelliarmus"}
     else:
         return {"Se voto un expelliarmus tiene que decidir el ministro"}
 
 
-@app.get("/caos")
-async def caos(game_name: str):
+@app.get("/chaos")
+async def chaos(game_name: str):
     if (not game_exists(game_name)):
         raise HTTPException(status_code=401,
                             detail="the game not exist")
@@ -657,7 +682,11 @@ async def caos(game_name: str):
     if (box.loyalty == "Fenix Order" and box.position == MAX_BOX_FENIX_ORDER) or \
             (box.loyalty == "Death Eaters" and box.position == MAX_BOX_DEATH_EATERS):
         set_phase_game(game_name, 5)
-        finish_game_id = end_game(game_name, box.loyalty)
+        # finish_game_id = end_game(game_name, box.loyalty)
+        set_end_date(game_name)
+        finish_game_id = new_finished_game(game_name,
+                                           box.loyalty,
+                                           "Full board")
         return finished_game_to_dict(finish_game_id)
     set_phase_game(game_name, 1)
     marker_to_zero(turn_id)
@@ -670,6 +699,12 @@ async def caos(game_name: str):
 
 @app.get("/game_state")
 async def get_game_state(game_name: str):
+    if (not game_exists(game_name)):
+        raise HTTPException(status_code=401,
+                            detail="the game not exist")
+    if game_is_not_started(game_name):
+        raise HTTPException(status_code=401,
+                            detail="game is not started")
     num_fenix_orders_proclamed = get_num_proclamations_order_fenix(game_name)
     num_death_eaters_proclamed = get_num_proclamations_death_eaters(game_name)
     num_proclamations_availables = num_of_cards_in_steal_stack(game_name)
@@ -711,21 +746,33 @@ async def get_phase(game_name):
         list_players_dict = []
         for p in players_list:
             list_players_dict.append(player_to_dict(p.id))
-        return {"phase_game": get_phase_game(game_name), "players_list": list_players_dict}
+        return {"phase_game": get_phase_game(game_name),
+                "players_list": list_players_dict}
     if get_phase_game(game_name) == 6:
         box = get_last_box_used(game_name)
-        return {"phase_game": get_phase_game(game_name), "spell": box.spell}
-    else:
         return {"phase_game": get_phase_game(game_name),
-        "player_murdered" : player_to_dict(get_turn(get_turn_by_gamename(game_name)).player_killed)}
+                "spell": box.spell}
+    if get_phase_game(game_name) == 5:
+        finished_game = get_finished_game(game_name)
+        player_killed = get_turn(get_turn_by_gamename(game_name)).player_killed
+        return {"phase_game": get_phase_game(game_name),
+                "players": finished_game_to_dict(finished_game.id),
+                "player_murdered": player_to_dict(player_killed),
+                "reason": finished_game.reason}
+    else:
+        player_killed = get_turn(get_turn_by_gamename(game_name)).player_killed
+        return {"phase_game": get_phase_game(game_name),
+        "player_murdered": player_to_dict(player_killed)}
 
 @app.post("/phase")
 async def set_phase(game_name: str, phase: int):
     set_phase_game(game_name, phase)
 
 @app.get("/get_player")
-async def get_player(game_name: str, current_user: User = Depends(get_current_user)):
-    player_id = get_player_in_game_by_email(game_name,current_user.email_address)
+async def get_player(game_name: str, current_user: User =
+                        Depends(get_current_user)):
+    player_id = get_player_in_game_by_email(game_name,
+                                            current_user.email_address)
     return {"player": player_to_dict(player_id)}
 
 @app.get("/get_players")
