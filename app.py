@@ -648,6 +648,8 @@ async def expelliarmus(game_name: str, vote: bool):
             for c in range(2):
                 cards_list.append(card_to_dict(list_of_cards_id.pop()))
                 discard(cards_list[c]["id"])
+            if (num_of_cards_in_steal_stack(game_name) < MIN_CARDS_IN_STACK):
+                shuffle_cards(game_name)
             set_phase_game(game_name, 1)
             return {"Se descartaron las cartas"}
         else:
