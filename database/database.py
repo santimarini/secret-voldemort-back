@@ -101,7 +101,7 @@ db.generate_mapping(create_tables=True)
 @pony.orm.db_session
 def new_user(name, email_address, password):
     User(name=name, email_address=email_address, password=password,
-         photo="", verified=True)
+         photo="", verified=False)
 
 
 # given a email, returns the associate email
