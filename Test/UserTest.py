@@ -187,16 +187,6 @@ class UserTest(unittest.TestCase):
                'Authorization': 'Bearer {}'.format(token)})
         self.assertEqual(200, r2.status_code)
 
-    def test_change_password_unauthorized(self):
-        r5 = requests.post(self.api + self.register,
-                           data='{"alias": "user_nine", "email": "user_nine@gmail.com", "password": "123456"}')
-        data2 = {"old_password": "123456", "new_password": "secret123",
-                 "confirm_new_password": "secret123"}
-        token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyX2VpZ3RoQGdtYWlsLmNvbSIsImV4cCI6MTYwNTk4NDQ2N30.TP86rS08g58icByU8XmSjue68GaKfCKUJSFqL0JuQ"
-        r2 = requests.post(self.api + self.change_pass, params=data2, headers={'Content-Type': 'application/json',
-                                                                               'Authorization': 'Bearer {}'.format(token)})
-        self.assertEqual(401, r2.status_code)
-
     def test_change_password_email_not_verified(self):
         r5 = requests.post(self.api + self.register,
                            data='{"alias": "user_ten", "email": "user_ten@gmail.com", "password": "123456"}')

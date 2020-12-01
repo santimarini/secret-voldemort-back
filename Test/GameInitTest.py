@@ -14,33 +14,6 @@ class GameInitTest(unittest.TestCase):
     api = 'http://localhost:8000'
     start = '/start'
 
-    def test_vote_gob_true(self):
-        # Start game
-        requests.post(self.api + self.start, params={"game_name": "game_init_test"})
-        # Init turn
-        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test"})
-        # Dir
-        requests.put(self.api + '/game', params={"game_name": "game_init_test", "dir": 7})
-        # Vote
-        # for i in range(5):
-        response = requests.put(self.api + '/game/game_init_test/vote',
-                                params={"game_name": "game_init_test", "vote": True})
-        resp_json = json.loads(response.text)
-        self.assertEqual({'cant_vote': 1, 'vote': True, 'vote_less': 4}, resp_json)
-
-    def test_vote_gob_false(self):
-        # Start game
-        requests.post(self.api + self.start, params={"game_name": "game_init_test_2"})
-        # Init turn
-        requests.post(self.api + '/next_turn', params={"game_name": "game_init_test_2"})
-        # Dir
-        requests.put(self.api + '/game', params={"game_name": "game_init_test_2", "dir": 12})
-        # Vote
-        response = requests.put(self.api + '/game/game_init_test_2/vote',
-                                params={"game_name": "game_init_test_2", "vote": False})
-        resp_json = json.loads(response.text)
-        self.assertEqual({'cant_vote': 1, 'vote': False, 'vote_less': 4}, resp_json)
-
     def test_discard_min(self):
         # Start game
         requests.post(self.api + self.start, params={"game_name": "game_init_test_3"})
@@ -164,12 +137,12 @@ class GameInitTest(unittest.TestCase):
         self.assertEqual(200, response.status_code)
 
     def test_caos_not_started(self):
-        response0 = requests.get(self.api + '/caos',
+        response0 = requests.get(self.api + '/chaos',
                                  params={"game_name": "game_init_aa1"})
         self.assertEqual(401, response0.status_code)
 
     def test_caos_not_exist(self):
-        response0 = requests.get(self.api + '/caos',
+        response0 = requests.get(self.api + '/chaos',
                                  params={"game_name": "game_not_exist"})
         self.assertEqual(401, response0.status_code)
 
@@ -178,26 +151,8 @@ class GameInitTest(unittest.TestCase):
         requests.post(self.api + self.start, params={"game_name": "game_init_aa2"})
         # Init turn
         requests.post(self.api + '/next_turn', params={"game_name": "game_init_aa2"})
-        response0 = requests.get(self.api + '/caos',
+        response0 = requests.get(self.api + '/chaos',
                                  params={"game_name": "game_init_aa2"})
-        resp_caos = json.loads(response0.text)
-        if "box" in  resp_caos:
-            self.assertEqual(200, response0.status_code)
-        else:
-            self.assertEqual(200, 401)
-
-    def test_caos_shuffle_cards(self):
-        # Start game
-        requests.post(self.api + self.start, params={"game_name": "game_init_aa3"})
-        # Init turn
-        requests.post(self.api + '/next_turn', params={"game_name": "game_init_aa3"})
-        # Get cards
-        list_of_cards_id = get_cards_in_game("game_init_aa3")
-        # Discard
-        for i in list_of_cards_id:
-            discard(i)
-        response0 = requests.get(self.api + '/caos',
-                                 params={"game_name": "game_init_aa3"})
         resp_caos = json.loads(response0.text)
         if "box" in  resp_caos:
             self.assertEqual(200, response0.status_code)
@@ -225,7 +180,7 @@ class GameInitTest(unittest.TestCase):
             box = get_box(box_id)
             set_used_box(box_id)
         # Caos
-        response0 = requests.get(self.api + '/caos',
+        response0 = requests.get(self.api + '/chaos',
                                  params={"game_name": "game_init_aa4"})
         resp_caos = json.loads(response0.text)
         if "end_date" in  resp_caos:
@@ -244,10 +199,10 @@ class GameInitTest(unittest.TestCase):
         resp_list0 = json.loads(response0.text)
         # List of players for crucio
         response1 = requests.get(self.api + '/list_of_crucio',
-                            params={"game_name": "game_init_test_a1", "player_id": resp_list0["players_list"][0]["id"]})
+                            params={"game_name": "game_init_test_a1"})
         resp_list = json.loads(response1.text)
         response2 = requests.get(self.api + '/crucio',
-                                 params={"game_name": "game_init_test_a1", "player_id": resp_list["list_players"][0]["id"]})
+                                 params={"game_name": "game_init_test_a1", "victim": resp_list["list_players"][0]["id"]})
         response2_dict = json.loads(response2.text)
         if "loyalty" in response2_dict:
             self.assertEqual(200, 200)
@@ -265,15 +220,15 @@ class GameInitTest(unittest.TestCase):
         resp_list0 = json.loads(response0.text)
         # List of players for crucio
         response1 = requests.get(self.api + '/list_of_crucio',
-                            params={"game_name": "game_init_test_a2", "player_id": resp_list0["players_list"][0]["id"]})
+                            params={"game_name": "game_init_test_a2"})
         resp_list = json.loads(response1.text)
         response2 = requests.get(self.api + '/crucio',
-                                 params={"game_name": "game_init_test_a2", "player_id": resp_list["list_players"][0]["id"]})
+                                 params={"game_name": "game_init_test_a2", "victim": resp_list["list_players"][0]["id"]})
         response2_dict = json.loads(response2.text)
         if "loyalty" in response2_dict:
             response4 = requests.get(self.api + '/crucio',
                                      params={"game_name": "game_init_test_a2",
-                                             "player_id": resp_list["list_players"][0]["id"]})
+                                             "victim": resp_list["list_players"][0]["id"]})
             self.assertEqual(401, response4.status_code)
         else:
             self.assertEqual(500, response2.status_code)
