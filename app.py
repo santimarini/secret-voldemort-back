@@ -630,12 +630,6 @@ async def finish_imperius(game_name: str):
 
 @app.put("/expelliarmus")
 async def expelliarmus(game_name: str, vote: bool):
-    if (not game_exists(game_name)):
-        raise HTTPException(status_code=400,
-                            detail="the game not exist")
-    if game_is_not_started(game_name):
-        raise HTTPException(status_code=400,
-                            detail="game is not started")
     if get_num_proclamations_death_eaters(game_name) < 5:
         raise HTTPException(status_code=401,
                             detail="there are not enough proclamations")

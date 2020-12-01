@@ -241,14 +241,6 @@ class GameTest(unittest.TestCase):
         response = requests.post(self.api + "/finish_imperius", params={"game_name": "game_init_test_8"})
         self.assertEqual(400, response.status_code)
 
-    def test_expelliarmus_game_not_exist(self):
-        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_notexist", "vote": True})
-        self.assertEqual(400, response.status_code)
-
-    def test_expelliarmus_game_not_started(self):
-        response = requests.put(self.api + "/expelliarmus", params={"game_name": "game_init_test_8", "vote": True})
-        self.assertEqual(400, response.status_code)
-
     def test_expelliarmus_less_5_proclamation(self):
         # Start
         requests.post(self.api + self.start, params={"game_name": "game_init_test_a7"})
