@@ -3,7 +3,7 @@ import os
 
 # DATABASE_PATH = '/home/valentin/secvold/secret-voldemort-back/database'
 # DATABASE_PATH = '/home/joaquin/secret-voldemort-back/database'
-DATABASE_PATH = '/home/agusten/Pavilion/UNC/3erAño/IngenieriaDelSoftware/SecretVoldemort/Proyect/database'
+DATABASE_PATH = '/home/agusten/Pavilion/UNC/3erAño/IngenieriaDelSoftware/SecretVoldemort/secret-voldemort-back/database'
 
 sys.path.insert(1, DATABASE_PATH)
 

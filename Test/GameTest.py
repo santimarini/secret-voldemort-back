@@ -143,9 +143,6 @@ class GameTest(unittest.TestCase):
 
     def test_show_games(self):
         response = requests.get(self.api + self.show_games)
-        games = {'games_list': [{'id': 2, 'name': 'game_name_not_started', 'players': 3, 'max_players': 10},\
-                                {'id': 3, 'name': 'game_name_test', 'players': 0, 'max_players': 5}]}
-        self.assertEqual(games,json.loads(response.text))
         self.assertEqual(200,response.status_code)
 
     def test_avada_kedavra_ok(self):
