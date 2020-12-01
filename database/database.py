@@ -31,6 +31,7 @@ class Player(db.Entity):
     user1 = Required(User)
     actualGame = Optional('Game')
 
+
 # Games table
 class Game(db.Entity):
     name = Required(str, unique=True)
@@ -81,6 +82,7 @@ class Box(db.Entity):
     is_used = Required(bool)
     actualGame = Optional(Game)
 
+
 # Finished games table
 class FinishedGames(db.Entity):
     id = PrimaryKey(int, auto=True)
@@ -115,10 +117,12 @@ def get_user_by_email(email_address):
 def is_verified(email_address):
     return (User.get(email_address=email_address).verified)
 
+
 @pony.orm.db_session
 def set_user_verified(user_email):
     user = get_user_by_email(user_email)
     user.verified = True
+
 
 # verify if certain email exists
 @pony.orm.db_session
@@ -131,10 +135,12 @@ def update_username(email, nickname):
     user = get_user_by_email(email)
     user.name = nickname
 
+
 # replace the old password with a new one
 @pony.orm.db_session
 def update_password(new_password, user_id):
     User[user_id].password = new_password
+
 
 @pony.orm.db_session
 def update_photo(user_email, photo):
@@ -142,10 +148,6 @@ def update_photo(user_email, photo):
     user.photo = photo
     commit()
 
-@pony.orm.db_session
-def save_user_image(email, photo_link):
-    user = get_user_by_email(email)
-    user.photo = photo_link
 
 # return true if the user is in the game
 @pony.orm.db_session
@@ -156,10 +158,6 @@ def is_user_in_game(email_address, game_name):
             b = True
     return b
 
-@pony.orm.db_session
-def get_user_email_by_id(player_id):
-    player_email = Player[player_id].user1.email_address
-    return player_email
 
 @pony.orm.db_session
 def is_the_creator_game(game_name, email):
@@ -172,6 +170,7 @@ def is_the_creator_game(game_name, email):
 list_roles_death_eaters = ["Voldemort", "Bellatrix", "Draco", "Dolores Umbridge"]
 list_roles_fenix_order = ["Harry Potter", "Hermione", "Ronald", "Dumbledore", "Sirius Black", "Hagrid"]
 
+
 @pony.orm.db_session
 def new_player(email_address):
     user1 = get_user_by_email(email_address)
@@ -179,11 +178,13 @@ def new_player(email_address):
     commit()
     return player.id
 
+
 @pony.orm.db_session
-def set_player_position(game_name,n_players):
+def set_player_position(game_name, n_players):
     player_list = get_player_list(game_name)
     for i in range(n_players):
         player_list[i].position = i
+
 
 @pony.orm.db_session
 def player_doesnt_exists(player_id):
@@ -211,6 +212,7 @@ def get_player_killed(turn_id):
 def delete_player(player_id):
     Player[player_id].delete()
 
+
 # return list of players in a specific game
 @pony.orm.db_session
 def get_player_list(game_name):
@@ -221,14 +223,6 @@ def get_player_list(game_name):
     list.sort(key=lambda p: p.id)
     return list
 
-
-@pony.orm.db_session
-def get_player_ids_list(game_name):
-    list = []
-    for p in get_game_by_name(game_name).players:
-        player = Player[p.id]
-        list.append(player.id)
-    return list
 
 @pony.orm.db_session
 def get_next_player_to_min(game_name):
@@ -249,6 +243,7 @@ def get_next_player_to_min(game_name):
     else:
         return (t.imperius_minister_new)
 
+
 # transform a player object in a dict
 @pony.orm.db_session
 def player_to_dict(player_id):
@@ -261,6 +256,7 @@ def player_to_dict(player_id):
                       user1=p.user1.email_address,
                       actualGame=p.actualGame.name)
         return dict_p
+
 
 @pony.orm.db_session
 def get_players_avaibles_to_elect_more_5players(game_name, turn_id):
@@ -282,6 +278,7 @@ def get_players_avaibles_to_elect_less_5players(game_name, turn_id):
                     get_player_list(game_name))
     return (list(list_a))
 
+
 @pony.orm.db_session
 def assing_loyalty_and_rol(game_name, n_players):
     if n_players == 5 or n_players == 6:
@@ -290,6 +287,7 @@ def assing_loyalty_and_rol(game_name, n_players):
         assign_roles_8players(game_name)
     if n_players == 9 or n_players == 10:
         assign_roles_10players(game_name)
+
 
 @pony.orm.db_session
 def assign_roles_6players(game_name):
@@ -344,6 +342,7 @@ def assign_roles_10players(game_name):
             player_list[i + 4].loyalty = "Fenix Order"
             player_list[i + 4].rol = list_roles_fenix_order[i]
 
+
 @pony.orm.db_session
 def update_player_alive(player_id):
     Player[player_id].is_alive = False
@@ -357,6 +356,7 @@ def player_belong_to_game(player_id, game_name):
         game = get_game_by_name(game_name)
         player = Player[player_id]
         return (player in game.players)
+
 
 @pony.orm.db_session
 def get_player_in_game_by_email(game_name, email):
@@ -377,11 +377,13 @@ def get_player_in_game_by_email(game_name, email):
 def set_vote_player(player_id: int, vote: Optional(bool)):
     Player[player_id].vote = vote
 
+
 @pony.orm.db_session
 def reset_votes_players(game_name):
     game = get_game_by_name(game_name)
     for p in game.players:
         p.vote = None
+
 
 @pony.orm.db_session
 def delete_player_from_game(game_name, player_id):
@@ -392,24 +394,18 @@ def delete_player_from_game(game_name, player_id):
     g.players.remove(p)
     user.players.remove(p)
 
+
 @pony.orm.db_session
 def player_already_vote(player_id):
     player = Player[player_id]
     return player.vote is not None
+
 
 @pony.orm.db_session
 def delete_all_player(game_name):
     game = get_game_by_name(game_name)
     for player in game.players:
         game.players.remove(player)
-
-
-@pony.orm.db_session
-def players_out_of_game(game_name):
-    game = get_game_by_name(game_name)
-    for player in game.players:
-        game.players.remove(player)
-        delete_player(player.id)
 
 
 # Game functions
@@ -453,6 +449,7 @@ def get_phase_game(game_name):
     game = get_game_by_name(game_name)
     return game.phase
 
+
 # given a name, returns the associate game
 @pony.orm.db_session
 def get_game_by_name(name):
@@ -480,25 +477,12 @@ def num_of_players_alive(game_name):
 
 
 @pony.orm.db_session
-def delete_game(game_name):
-    get_game_by_name(game_name).delete()
-
-@pony.orm.db_session
-def end_game(game_name, loyalty):
-    set_end_date(game_name)
-    finish_game_id = new_finished_game(game_name, loyalty)
-    delete_all_box(game_name)
-    delete_all_proclamation(game_name)
-    delete_all_player(game_name)
-    delete_turn(game_name)
-    return finish_game_id
-
-@pony.orm.db_session
 def game_to_dict(game):
     dict_g = dict(id=game.id, name=game.name, players=num_of_players(game.name),
                   max_players=game.max_players
                   )
     return dict_g
+
 
 @pony.orm.db_session
 def get_games():
@@ -508,17 +492,14 @@ def get_games():
         dict_g.append(game_to_dict(g))
     return dict_g
 
+
 @pony.orm.db_session
 def set_end_date(game_name):
     game = get_game_by_name(game_name)
     game.end_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
-# Trun functions
-
-@pony.orm.db_session
-def delete_turn(game_name):
-    Turn[get_turn_by_gamename(game_name)].delete()
+# Turn functions
 
 # Creates a new turn
 @pony.orm.db_session
@@ -589,6 +570,7 @@ def set_elect_dir(turn_id, player_id):
 def get_turn(turn_id):
     return (Turn[turn_id])
 
+
 @pony.orm.db_session
 def get_post_min(turn_id):
     return Turn[turn_id].post_min
@@ -651,15 +633,10 @@ def get_status_vote(turn_id):
     turn = get_turn(turn_id)
     return turn.Neg_votes < turn.Pos_votes
 
+
 @pony.orm.db_session
 def set_player_crucio(game_name, player_id):
     get_turn(get_turn_by_gamename(game_name)).player_crucio = player_id
-
-
-@pony.orm.db_session
-def set_min_imperius_old_None(turn_id: int):
-    t = get_turn(turn_id)
-    t.imperius_minister_old = None
 
 
 @pony.orm.db_session
@@ -667,6 +644,7 @@ def voldemort_is_director(turn_id):
     turn = Turn[turn_id]
     player = Player[turn.post_dir]
     return player.rol == "Voldemort"
+
 
 @pony.orm.db_session
 def set_min_imperius_old(turn_id: int, old_min_id: int):
@@ -684,6 +662,12 @@ def set_min_imperius_new(turn_id: int, new_min_id: int):
 def set_min_imperius_new_None(turn_id: int):
     t = get_turn(turn_id)
     t.imperius_minister_new = None
+
+
+@pony.orm.db_session
+def set_min_imperius_old_None(turn_id: int):
+    t = get_turn(turn_id)
+    t.imperius_minister_old = None
 
 
 # Proclamations functions
@@ -748,13 +732,6 @@ def card_belong_to_game(card_id, game_name):
     return (card in game.proclamation)
 
 
-# return a object Proclamation by id, this function must be call in the legislative session and
-# when guess speel has invoke
-@pony.orm.db_session
-def get_card_in_the_steal_stack(id_card):
-    return Proclamation[id_card]
-
-
 # set a Proclamation as "Discarded" ie this card will be in "Discarded" deck
 @pony.orm.db_session
 def discard(id_card):
@@ -795,12 +772,6 @@ def card_to_dict(card_id):
                   position=c.position, adtualGame=c.actualGame.id)
     return dict_c
 
-@pony.orm.db_session
-def is_card_discard(card_id):
-    card = Proclamation[card_id]
-    return (card.deck == "Discarded")
-
-
 
 @pony.orm.db_session
 def get_number_proclamations_discarded(game_name):
@@ -831,18 +802,9 @@ def get_num_proclamations_death_eaters(game_name):
             n += 1
     return n
 
-@pony.orm.db_session
-def delete_all_proclamation(game_name):
-    for p in get_game_by_name(game_name).proclamation:
-        Proclamation[p.id].delete()
-
 
 # Box functions
 
-@pony.orm.db_session
-def delete_all_box(game_name):
-    for b in get_game_by_name(game_name).box:
-        Box[b.id].delete()
 
 @pony.orm.db_session
 def new_templates(game_name):
@@ -853,6 +815,7 @@ def new_templates(game_name):
     for i in range(6):
         box = Box(loyalty="Death Eaters", position=i + 1, is_used=False)
         game.box.add(box)
+
 
 @pony.orm.db_session
 def config_boards(game_name, n_players):
@@ -928,6 +891,7 @@ def get_next_box(card_id, game_name):
                 break
     return box.id
 
+
 @pony.orm.db_session
 def get_last_box_used(game_name):
     template = get_template_death_e(game_name)
@@ -941,6 +905,7 @@ def get_last_box_used(game_name):
         return template[0]
     else:
         return template[i - 1]
+
 
 @pony.orm.db_session
 def box_to_dict(box_id):
@@ -987,10 +952,3 @@ def finished_game_to_dict(finished_game_id):
                             reason=finished_game.reason,
                             list_user=list(map(lambda u: u.email_address, finished_game.users)))
     return dict_finish_game
-
-
-@pony.orm.db_session
-def finished_game_to_list_of_players(finish_game_id):
-    finish_game = FinishedGames[finish_game_id]
-    list_players_fg = list(map(lambda p: (p.alias, p.rol, p.loyalty), finish_game.players_finished))
-    return list_players_fg

@@ -5,7 +5,7 @@ import GameInitTest
 import CardsTest
 from mock_database import *
 
-#initialize the test suite
+# initialize the test suite
 loader = unittest.TestLoader()
 suite = unittest.TestSuite()
 

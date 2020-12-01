@@ -154,7 +154,7 @@ class GameInitTest(unittest.TestCase):
         response0 = requests.get(self.api + '/chaos',
                                  params={"game_name": "game_init_aa2"})
         resp_caos = json.loads(response0.text)
-        if "box" in  resp_caos:
+        if "box" in resp_caos:
             self.assertEqual(200, response0.status_code)
         else:
             self.assertEqual(200, 401)
@@ -183,7 +183,7 @@ class GameInitTest(unittest.TestCase):
         response0 = requests.get(self.api + '/chaos',
                                  params={"game_name": "game_init_aa4"})
         resp_caos = json.loads(response0.text)
-        if "end_date" in  resp_caos:
+        if "end_date" in resp_caos:
             self.assertEqual(200, response0.status_code)
         else:
             self.assertEqual(200, 401)
@@ -199,10 +199,11 @@ class GameInitTest(unittest.TestCase):
         resp_list0 = json.loads(response0.text)
         # List of players for crucio
         response1 = requests.get(self.api + '/list_of_crucio',
-                            params={"game_name": "game_init_test_a1"})
+                                 params={"game_name": "game_init_test_a1"})
         resp_list = json.loads(response1.text)
         response2 = requests.get(self.api + '/crucio',
-                                 params={"game_name": "game_init_test_a1", "victim": resp_list["list_players"][0]["id"]})
+                                 params={"game_name": "game_init_test_a1",
+                                         "victim": resp_list["list_players"][0]["id"]})
         response2_dict = json.loads(response2.text)
         if "loyalty" in response2_dict:
             self.assertEqual(200, 200)
@@ -220,10 +221,11 @@ class GameInitTest(unittest.TestCase):
         resp_list0 = json.loads(response0.text)
         # List of players for crucio
         response1 = requests.get(self.api + '/list_of_crucio',
-                            params={"game_name": "game_init_test_a2"})
+                                 params={"game_name": "game_init_test_a2"})
         resp_list = json.loads(response1.text)
         response2 = requests.get(self.api + '/crucio',
-                                 params={"game_name": "game_init_test_a2", "victim": resp_list["list_players"][0]["id"]})
+                                 params={"game_name": "game_init_test_a2",
+                                         "victim": resp_list["list_players"][0]["id"]})
         response2_dict = json.loads(response2.text)
         if "loyalty" in response2_dict:
             response4 = requests.get(self.api + '/crucio',
@@ -242,6 +244,7 @@ class GameInitTest(unittest.TestCase):
         response1 = requests.get(self.api + '/list_of_crucio',
                                  params={"game_name": "game_test_new", "player_id": 30})
         self.assertEqual(401, response1.status_code)
+
 
 if __name__ == '__main__':
     unittest.main()
